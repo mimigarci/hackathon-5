@@ -197,14 +197,14 @@ def build_tools() -> list[dict]:
         ),
         client_tool(
             "build_credit_order",
-            "Abre un plan de SAGA con sus cuotas para armar la orden de compra a crédito. El usuario toca el botón; "
+            "Abre una opción de crédito con sus cuotas para armar la orden de compra a crédito. El usuario toca el botón; "
             "no se cobra nada y la orden se guarda en su navegador.",
             {"offer_id": s("offer_id devuelto por scan_credit_offers"), "installments": i("Número de cuotas")},
             ["offer_id"],
         ),
         client_tool(
             "scan_credit_offers",
-            "Lista los planes de SAGA disponibles a crédito y abre el área de Créditos.",
+            "Lista las opciones a crédito (SAGA, Conduce y Propiedash) y abre el área de Créditos.",
             {},
             [],
         ),
@@ -250,8 +250,8 @@ def agent_config(voice_id: str, prompt: str, tools: list[dict], llm: str = "gemi
                 "tools": tools,
             },
         },
-        # Latencia mínima con voz estable: normalización en el prompt (la de ElevenLabs
-        # añade espera), streaming optimizado y turnos que se cierran antes.
+        # El modelo escribe cifras (el chat las muestra) y ElevenLabs las lee en palabras.
+        # Streaming optimizado y turnos que se cierran antes para responder rápido.
         "tts": {
             "voice_id": voice_id,
             "model_id": TTS_MODEL,
@@ -259,7 +259,7 @@ def agent_config(voice_id: str, prompt: str, tools: list[dict], llm: str = "gemi
             "stability": 0.55,
             "similarity_boost": 0.8,
             "speed": 1.0,
-            "text_normalisation_type": "system_prompt",
+            "text_normalisation_type": "elevenlabs",
         },
         "asr": {"quality": "high", "keywords": ASR_KEYWORDS},
         "turn": {

@@ -12,7 +12,7 @@ import {
   CATALOG, CATALOG_KIND, CREDIT_INSTALLMENTS, CREDIT_LIMIT_MINOR, FOUNDATIONS, INITIAL_WALLET_BALANCE_MINOR,
   MAX_QUANTITY, MAX_TOPUP_MINOR, SERVICES, TOPUP_METHODS,
 } from "./fixtures";
-import { checkOffer, demoState, findOffer, lineOf, lines, nextInstallment, planFor, precalifyInfo, quote, scanSaga } from "./credit.ts";
+import { checkOffer, demoState, findOffer, lineOf, lines, nextInstallment, planFor, precalifyInfo, quote, scanOrderOffers } from "./credit.ts";
 import type { CreditState, Plan } from "./credit.ts";
 import { DAILY_CAP, think } from "./brain.ts";
 import { answerCredit } from "./credit-texts.ts";
@@ -25,8 +25,6 @@ export interface Env {
   ELEVENLABS_AGENT_ID_FEMALE?: string;
   ELEVENLABS_AGENT_ID_MALE?: string;
   WISIVOZ_SESSION_SECRET?: string;
-  SUPABASE_URL?: string;
-  SUPABASE_PUBLISHABLE_KEY?: string;
   WISIVOZ_INTENT_TTL?: string;
   WISIVOZ_SIGNED_PER_IP_10MIN?: string;
   OPENROUTER_API_KEY?: string;
@@ -144,31 +142,13 @@ export class Wallet extends DurableObject<Env> {
   }
 
   /** Cuándo se abrió el monedero (para el movimiento de saldo inicial). */
-  async openedAt(principal: string): Promise<number> {
+  async openedAt(): Promise<number> {
     let t = await this.ctx.storage.get<number>("opened_at");
     if (t == null) {
       t = Date.now() / 1000;
       await this.ctx.storage.put("opened_at", t);
-      this.replicate(principal, await this.balanceMinor(), await this.creditUsed());
     }
     return t;
-  }
-
-  /** Copia a Supabase en segundo plano: si falla, el pago ya está hecho y no se entera nadie. */
-  private replicate(principal: string, balance: number, creditUsed: number, op?: Operation) {
-    const { SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key } = this.env;
-    if (!url || !key) return;
-    const p_op = op && {
-      operation_ref: op.operation_ref, kind: op.kind, title: describe(op.kind, op.details),
-      amount_minor: (CREDIT_KINDS.has(op.kind) ? 1 : -1) * (op.amount_minor + op.fee_minor), details: op.details ?? {},
-    };
-    this.ctx.waitUntil(
-      fetch(`${url.replace(/\/$/, "")}/rest/v1/rpc/wisi_sync`, {
-        method: "POST",
-        headers: { apikey: key, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_principal: principal, p_balance: balance, p_credit_used: creditUsed, p_op: p_op ?? null }),
-      }).then((r) => { if (!r.ok) console.warn("supabase", r.status); }).catch((e) => console.warn("supabase", String(e))),
-    );
   }
 
   /** Lo usado de la línea Credirecto "día a día" (la de la wallet). */
@@ -193,7 +173,7 @@ export class Wallet extends DurableObject<Env> {
   }
 
   /** Ejecuta una intención de forma idempotente (misma prueba -> misma operación). */
-  async execute(principal: string, intent_id: string, proof: string): Promise<ExecOut> {
+  async execute(intent_id: string, proof: string): Promise<ExecOut> {
     // Las llamadas a un Durable Object se serializan: no hace falta lock.
     const s = this.ctx.storage;
     const replay = await s.get<string>(`idem:${proof}`);
@@ -257,7 +237,6 @@ export class Wallet extends DurableObject<Env> {
       [`op:${op.operation_ref}`]: op,
       [`idem:${proof}`]: op.operation_ref,
     });
-    this.replicate(principal, next, used, op);
     return { result: "executed", op, balance: next, plan };
   }
 
@@ -415,14 +394,14 @@ const tools = {
   },
   async scan_credit_offers(env: Env, p: string) {
     const { state } = await wallet(env, p).creditView();
-    const { offers, summary } = scanSaga(state, new Date());
-    const speech = `Hay ${summary.disponible} planes de SAGA para armar tu orden de compra a crédito. Es una simulación.`;
+    const { offers, summary } = scanOrderOffers(state, new Date());
+    const speech = "Puedes armar una orden de compra a crédito con SAGA (Los Roques), Conduce (un carro) o Propiedash (un apartamento). Es una simulación.";
     return resp("ok", speech, { offers, summary });
   },
   /** Pregunta de crédito con respuesta preparada; matched=false si no es de aquí. */
   async answer_credit_question(env: Env, p: string, text: string) {
     const { state, plans } = await wallet(env, p).creditView();
-    const a = answerCredit(text, state, scanSaga(state, new Date()).offers, plans);
+    const a = answerCredit(text, state, scanOrderOffers(state, new Date()).offers, plans);
     return resp("ok", a?.reply ?? null, { matched: !!a, intent: a?.intent ?? null });
   },
   async quote_credit(env: Env, p: string, offer_id: string, installments: unknown) {
@@ -463,7 +442,7 @@ const tools = {
       take: (t) => w.brainTake(t),
       cacheGet: (k) => w.brainCacheGet(k),
       cachePut: (k, v) => w.brainCachePut(k, v),
-      offers: async () => scanSaga((await w.creditView()).state, new Date()).offers,
+      offers: async () => scanOrderOffers((await w.creditView()).state, new Date()).offers,
     });
     console.log(JSON.stringify({ brain: out.tier, model: out.model ?? null, cost_usd: out.cost_usd ?? null }));
     return resp("ok", out.reply || null, out as unknown as Record<string, unknown>);
@@ -473,7 +452,7 @@ const tools = {
     const valid = await Promise.all(["biometric", "pin", "otp"].map((f) => approvalProof(env, p, intent_id, f)));
     if (!proof || !valid.some((v) => safeEqual(v, proof)))
       return resp("denied", "No puedo confirmar esta operación.", {}, { code: "invalid_approval", message: "Prueba de aprobación inválida." });
-    const r = await wallet(env, p).execute(p, intent_id, proof);
+    const r = await wallet(env, p).execute(intent_id, proof);
     switch (r.result) {
       case "executed":
       case "replayed":
@@ -517,7 +496,7 @@ const tools = {
     // El saldo inicial se lista para que la cuenta siempre cuadre con el saldo.
     const opening = {
       operation_ref: "op_saldo_inicial", kind: "welcome", title: "Saldo inicial de la demo", amount_minor: INITIAL_WALLET_BALANCE_MINOR,
-      state: "settled", created_at: await w.openedAt(p), details: {},
+      state: "settled", created_at: await w.openedAt(), details: {},
     };
     return resp("ok", speech, { movements: [...movements, opening], balance_minor: bal });
   },
@@ -616,15 +595,6 @@ async function signedUrl(env: Env, agentId: string): Promise<string | null> {
     return null;
   }
 }
-async function supabaseState(env: Env): Promise<string> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return "sin configurar";
-  try {
-    const r = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/rpc/wisi_ping`, {
-      method: "POST", headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: "{}",
-    });
-    return r.ok ? "conectada" : r.status === 404 ? "falta ejecutar la migración 002" : `error ${r.status}`;
-  } catch { return "sin conexión"; }
-}
 async function conversationToken(env: Env, agentId: string): Promise<string | null> {
   if (!env.ELEVENLABS_API_KEY || !agentId) return null;
   try {
@@ -704,7 +674,7 @@ async function dispatchTool(env: Env, p: string, name: string, b: Body): Promise
 async function api(req: Request, env: Env, url: URL): Promise<Response> {
   const path = url.pathname;
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-  if (path === "/health") return json({ status: "ok", mode: "mock", runtime: "cloudflare-workers", ...(url.searchParams.has("deep") ? { supabase: await supabaseState(env) } : {}) });
+  if (path === "/health") return json({ status: "ok", mode: "mock", runtime: "cloudflare-workers" });
   if (req.method !== "POST") return fail(405, "method_not_allowed");
   if (path === "/api/session") return createSession(req, env, url);
 

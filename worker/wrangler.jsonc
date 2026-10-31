@@ -26,10 +26,7 @@
     "WISIVOZ_INTENT_TTL": "180",
     "WISIVOZ_SIGNED_PER_IP_10MIN": "30",
     "OPENROUTER_MODEL_FAST": "mistralai/mistral-nemo,meta-llama/llama-3.1-8b-instruct,openai/gpt-oss-20b",
-    "OPENROUTER_MODEL_SMART": "anthropic/claude-haiku-5.5",
-    // Clave publicable: pensada para ir en cliente; la protección es RLS (migración 002).
-    "SUPABASE_URL": "https://yhiwsvqeeqvtisqckihd.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_VxP8Kab4bqz6q2WwVeav4g_YQejfdhz"
+    "OPENROUTER_MODEL_SMART": "anthropic/claude-haiku-5.5"
   },
   "observability": { "enabled": true }
 }

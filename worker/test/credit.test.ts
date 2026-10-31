@@ -17,8 +17,8 @@ test("escaneo del perfil demo", () => {
   assert.equal(find("svc_condominio").status, "disponible");
   assert.equal(find("svc_condominio").reason, "Aprobado: Bs 1.200,00 cabe en tu línea disponible de Bs 2.000,00");
   assert.equal(find("mercantil_rcv").status, "disponible"); // 1.400 <= 2.000
-  assert.equal(find("saga_roques").down_payment_minor, 192000);
-  assert.equal(find("saga_roques").financed_minor, 288000);
+  assert.equal(find("saga_roques").down_payment_minor, 19200);
+  assert.equal(find("saga_roques").financed_minor, 28800);
   assert.equal(find("conduce_corolla").status, "precalificado");
   assert.equal(find("conduce_corolla").down_payment_pct, 30);
   assert.equal(find("propiedash_apto").down_payment_pct, 20);
@@ -80,7 +80,7 @@ test("checkOffer distingue exceso de línea y rechazo", () => {
 test("planFor arma el plan solo en pisos 1 y 2", () => {
   const p = planFor("saga_merida", 4, demoState(), NOW, "plan_x");
   assert.ok(p);
-  assert.equal(p!.financed_minor, 156000);
+  assert.equal(p!.financed_minor, 15600);
   assert.equal(p!.installments.length, 4);
   assert.ok(p!.installments.every((i) => !i.paid));
   assert.equal(planFor("conduce_corolla", 36, demoState(), NOW, "plan_y"), null);

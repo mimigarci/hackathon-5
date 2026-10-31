@@ -244,3 +244,29 @@
 }
 .cr-home-scan svg { width: 20px; height: 20px; }
 .cr-home-scan:active { background: var(--cr-lime-press); }
+
+/* Área compacta: tres opciones a la vista, sin pantallas largas */
+.cr-strip { margin: 2px var(--gutter) 12px; font-size: 13px; color: var(--cr-ink-2); }
+.cr-strip b { color: var(--cr-lime); font-weight: 600; }
+.cr-strip em { font-style: normal; }
+.cr-offer { padding: 12px 14px; gap: 2px; border-radius: 16px; }
+.cr-offer .why { display: none; }
+.cr-offer .title { font-size: 15px; line-height: 1.25; }
+.cr-offer .price { font-size: 17px; }
+.cr-list { gap: 8px; }
+.cr-detail { padding: 14px; border-radius: 18px; }
+.cr-detail h2 { font-size: 18px; }
+.cr-detail .txt { font-size: 13px; margin-top: 2px; }
+.cr-price { margin-top: 8px; }
+.cr-price b { font-size: 22px; }
+.cr-reason { font-size: 13px; margin-top: 8px; padding-top: 8px; }
+.cr .cr-sec { margin-top: 12px; }
+.cr .cr-sec > h2 { font-size: 15px; margin-bottom: 8px; }
+.cr-opt { min-height: 38px; padding: 0 12px; font-size: 14px; }
+.cr-sum div { padding: 7px 12px; font-size: 14px; }
+.cr-table { font-size: 13px; }
+.cr-table td, .cr-table th { padding: 5px 2px; }
+.cr-note { font-size: 12px; margin-top: 10px; }
+.cr .sticky-cta { padding-top: 8px; }
+.cr-go { min-height: 48px; }
+.cr-why { font-size: 12px; margin-top: 4px; }

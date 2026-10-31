@@ -15,8 +15,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="/assets/app/app.css?v=18" />
-<link rel="stylesheet" href="/assets/app/credit.css?v=18" />
+<link rel="stylesheet" href="/assets/app/app.css?v=19" />
+<link rel="stylesheet" href="/assets/app/credit.css?v=19" />
 </head>
 <body>
 <!-- Iconos (trazo 1.8, mismo lenguaje que la app) -->
@@ -112,7 +112,7 @@
             <span class="credi">
               <span class="brand"><img src="/assets/pd/cr/credirecto_isotipo.svg" alt="" /><img class="wm" src="/assets/pd/cr/credirecto_wordmark.svg" alt="Credirecto" /></span>
               <b class="t">Compra a crédito</b>
-              <small>Arma tu orden de compra con SAGA.</small>
+              <small>Arma tu orden de compra.</small>
             </span>
           </button>
         </div>
@@ -381,14 +381,8 @@
       <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Créditos</h1>
         <button type="button" class="circle" data-wisi aria-label="Ayuda: hablar con Wisi"><img src="/assets/pd/header_help.svg" alt="" /></button></header>
       <div class="scroll">
-        <article class="cr-hero" aria-label="Tu línea para viajes">
-          <div class="cr-hero-top"><span>Línea para viajes</span></div>
-          <div class="cr-lines">
-            <div class="cr-line"><small>Disponible</small><b class="num" id="crTrip">—</b><span class="cr-bar" aria-hidden="true"><span id="crTripBar"></span></span><em id="crTripOf"></em></div>
-          </div>
-          <p class="cr-next">SAGA centraliza tu compra: elige un plan y arma tu orden.</p>
-        </article>
-        <div class="cr-sec" style="margin-top:22px" id="crResults" aria-live="polite"></div>
+        <p class="cr-strip">Línea para viajes <b class="num" id="crTrip">—</b> <em id="crTripOf"></em></p>
+        <div class="cr-sec" id="crResults" aria-live="polite"></div>
         <section class="cr-sec" aria-labelledby="h-crplans">
           <h2 id="h-crplans">Mis órdenes</h2>
           <div id="crPlans"></div>
@@ -414,7 +408,7 @@
           <p class="cr-freq" id="coFreq"></p>
           <div class="cr-quote" id="coQuote" aria-live="polite"></div>
         </section>
-        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a SAGA.</p>
+        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a los aliados.</p>
       </div>
       <div class="sticky-cta">
         <button type="button" class="cr-go" id="coGo" aria-describedby="coWhy">Armar orden de compra</button>
@@ -427,7 +421,7 @@
       <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Orden de compra</h1><span></span></header>
       <div class="scroll">
         <article class="cr-detail">
-          <div class="top"><span class="cr-partner">SAGA</span><span class="cr-pill d">Armada</span></div>
+          <div class="top"><span class="cr-partner" id="orPartner"></span><span class="cr-pill d">Armada</span></div>
           <h2 id="orTitle"></h2>
           <p class="txt num" id="orRef"></p>
         </article>
@@ -534,7 +528,7 @@
         <button type="button" class="item" data-push="invoices"><span class="ic"><svg><use href="#i-receipt"/></svg></span><span class="tx"><b>Facturas</b><small>Revisa los comprobantes de tus pagos</small></span></button>
         <button type="button" class="item" data-push="charge"><span class="ic"><svg><use href="#i-send"/></svg></span><span class="tx"><b>Cobrar por wallet</b><small>Comparte un enlace de cobro</small></span></button>
         <button type="button" class="item" data-push="scan"><span class="ic"><svg><use href="#i-car"/></svg></span><span class="tx"><b>Pagar ticket de estacionamiento</b><small>Escanea el QR del ticket</small></span></button>
-        <button type="button" class="item" data-push="crscan"><span class="ic cr-ic"><svg><use href="#i-credit"/></svg></span><span class="tx"><b>Créditos</b><small>Arma tu orden de compra con SAGA</small></span></button>
+        <button type="button" class="item" data-push="crscan"><span class="ic cr-ic"><svg><use href="#i-credit"/></svg></span><span class="tx"><b>Créditos</b><small>Arma tu orden de compra</small></span></button>
       </div>
       <button type="button" class="cancel" data-close>Cerrar</button>
     </div>
@@ -546,6 +540,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script type="module" src="/assets/app/app.js?v=18"></script>
+<script type="module" src="/assets/app/app.js?v=19"></script>
 </body>
 </html>

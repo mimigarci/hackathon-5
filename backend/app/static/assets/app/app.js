@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=18";
+import { installFeatures } from "./features.js?v=19";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -539,16 +539,15 @@ $("tkPay").addEventListener("click", () => tkCtx?.intent_id && confirmOp(tkCtx.i
 // Contrato del backend: docs/creditos-contrato.md. La app solo muestra lo que decide el
 // motor del Worker (con su motivo); el dinero se mueve únicamente con la hoja de huella.
 // Las órdenes viven solo en el caché del navegador: nada de base de datos ni de servidor.
-const ORDERS_KEY = "pd.orders";
+const ORDERS_KEY = "pd.credit_orders";
 let ordersMem = [];
 const orders = {
   all() { try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) ?? ordersMem; } catch { return ordersMem; } },
   save(list) { ordersMem = list; try { localStorage.setItem(ORDERS_KEY, JSON.stringify(list)); } catch {} },
   clear() { ordersMem = []; try { localStorage.removeItem(ORDERS_KEY); } catch {} },
-  financed() { return this.all().reduce((a, o) => a + o.financed_minor, 0); },
+  financed() { return this.all().reduce((a, o) => a + (o.piso === 2 ? o.financed_minor : 0), 0); }, // carro y casa los financia el banco
 };
 const credit = { status: null, failed: false, offers: [], summary: null, scanning: null, offer: null, n: null, quote: null, quoting: false, bound: null, seq: 0 };
-const PISOS = { 2: ["Planes de SAGA", "Con inicial, en cuotas"] };
 const PILL = { disponible: ["d", "Disponible"], precalificado: ["p", "Precalificado"], por_desbloquear: ["u", "Por desbloquear"] };
 const FREQ = { semanal: "semanales", quincenal: "quincenales", mensual: "mensuales" };
 /** Crea un elemento con texto plano (nunca innerHTML con datos de la API). */
@@ -573,17 +572,16 @@ function tripAvailable() {
   return t ? Math.max(0, t.available_minor - orders.financed()) : null;
 }
 function paintCredit() {
-  const t = credit.status?.lines?.turismo, avail = tripAvailable();
-  $("crTrip").textContent = t ? bs(avail) : "—";
-  $("crTripOf").textContent = t ? `de ${bs(t.limit_minor)}` : "";
-  $("crTripBar").style.setProperty("--w", t && t.limit_minor > 0 ? `${Math.max(0, Math.min(100, (avail / t.limit_minor) * 100))}%` : "0%");
+  const t = credit.status?.lines?.turismo;
+  $("crTrip").textContent = t ? money(tripAvailable(), "USD") : "—";
+  $("crTripOf").textContent = t ? `de ${money(t.limit_minor, "USD")}` : "";
   paintPlans();
 }
 function paintPlans() {
   const host = $("crPlans"), list = orders.all();
   if (!list.length) {
     const e = mk("div", "empty");
-    e.append(mk("b", null, "Aún no tienes órdenes"), "Elige un plan de SAGA y arma tu primera orden de compra.");
+    e.append(mk("b", null, "Aún no tienes órdenes"), "Elige una opción y arma tu primera orden de compra.");
     return host.replaceChildren(e);
   }
   host.replaceChildren(mk("div", "list"));
@@ -595,7 +593,7 @@ function orderRow(o) {
   const ic = mk("span", "ic");
   ic.innerHTML = '<svg><use href="#i-credit"/></svg>';
   const tx = mk("span", "tx");
-  tx.append(mk("b", null, `Orden · ${o.title}`), mk("small", null, `${when(o.created_at)} · SAGA · ${o.n} cuotas`));
+  tx.append(mk("b", null, `Orden · ${o.title}`), mk("small", null, `${when(o.created_at)} · ${o.partner} · ${o.n} ${o.piso === 3 ? "meses" : "cuotas"}`));
   b.append(ic, tx, mk("span", "amt num", money(o.price_minor, o.currency)));
   b.onclick = () => push("crorder", { id: o.id });
   return b;
@@ -628,21 +626,12 @@ function paintOffers() {
   host.removeAttribute("aria-busy");
   if (!offers.length) {
     const e = mk("div", "empty");
-    e.append(mk("b", null, "Buscando los planes de SAGA…"));
+    e.append(mk("b", null, "Buscando tus opciones…"));
     return host.replaceChildren(e);
   }
-  const parts = [];
-  for (const piso of [2]) {
-    const list = offers.filter((o) => o.piso === piso);
-    if (!list.length) continue;
-    const g = mk("section", "cr-group"), h = mk("h2", null, PISOS[piso][0]), box = mk("div", "cr-list");
-    g.dataset.piso = piso;
-    h.append(mk("small", null, PISOS[piso][1]));
-    box.append(...list.map(offerCard));
-    g.append(h, box);
-    parts.push(g);
-  }
-  host.replaceChildren(...parts);
+  const box = mk("div", "cr-list");
+  box.append(...offers.map(offerCard));
+  host.replaceChildren(box);
 }
 async function fetchOffers({ paint = true } = {}) {
   const res = await callTool("scan_credit_offers");
@@ -705,7 +694,7 @@ function paintQuote(q) {
   } else {
     const rows = [["Inicial hoy", money(q.down_payment_minor, cur)], ["Financiado", money(q.financed_minor, cur)]];
     if (inst.length > 12) rows.push(["Cuota estimada", `${money(inst[0].amount_minor, cur)} al mes`]); // plazos largos: sin tabla
-    rows.push(["Intereses", q.interest_minor ? money(q.interest_minor, cur) : "Sin intereses (demo)"], ["Total", money(q.total_minor, cur), "tot"]);
+    rows.push(["Intereses", credit.offer?.piso === 3 ? "Los define el banco" : "Sin intereses (demo)"], ["Total", money(q.total_minor, cur), "tot"]);
     parts.push(sumList(rows));
     if (inst.length && inst.length <= 12) {
       const tb = mk("table", "cr-table"), cap = mk("caption", null, "Tus cuotas"), hd = mk("thead"), hr = mk("tr"), body = mk("tbody");
@@ -743,12 +732,12 @@ function paintCreditCta() {
     return;
   }
   const q = credit.quote, avail = tripAvailable();
-  const over = q && avail != null && q.financed_minor > avail;
+  const over = q && o.piso === 2 && avail != null && q.financed_minor > avail;
   go.disabled = !q || q.eligible === false || over || credit.quoting;
   go.textContent = "Armar orden de compra";
   why.textContent = q?.eligible === false ? q.reason || "Todavía no cumples los requisitos."
-    : over ? `Lo financiado supera lo que te queda en tu línea: ${bs(avail)}. Cancela una orden para liberar línea.`
-    : "No se cobra nada: tu orden queda guardada en este navegador y en tus Movimientos.";
+    : over ? `Supera lo que te queda en tu línea: ${money(avail, "USD")}. Cancela una orden para liberarla.`
+    : o.piso === 3 ? "No se cobra nada. Es referencial: el banco aliado decide." : "No se cobra nada: queda guardada en este navegador y en Movimientos.";
 }
 SCREENS.croffer = {
   async enter(p = {}) {
@@ -778,9 +767,9 @@ $("coGo").addEventListener("click", () => {
   const o = credit.offer, q = credit.quote, btn = $("coGo");
   if (!o || !q || btn.disabled) return;
   const order = {
-    id: "OC-" + Date.now().toString(36).toUpperCase(), offer_id: o.offer_id, title: o.title, currency: q.currency, price_minor: q.total_minor,
+    id: "OC-" + Date.now().toString(36).toUpperCase(), offer_id: o.offer_id, title: o.title, partner: o.partner, piso: o.piso, currency: q.currency, price_minor: q.total_minor,
     down_minor: q.down_payment_minor, financed_minor: q.financed_minor, n: credit.n, frequency: o.frequency,
-    installments: (q.installments ?? []).map((i) => ({ n: i.n, due_date: i.due_date, amount_minor: i.amount_minor })), created_at: Date.now() / 1000,
+    installments: (q.installments ?? []).slice(0, 12).map((i) => ({ n: i.n, due_date: i.due_date, amount_minor: i.amount_minor })), created_at: Date.now() / 1000,
   };
   orders.save([order, ...orders.all()].slice(0, 20));
   haptic([10, 40, 10]);
@@ -796,11 +785,20 @@ SCREENS.crorder = {
     if (!o) return;
     orderOpen = o.id;
     $("orTitle").textContent = o.title;
+    $("orPartner").textContent = o.partner;
     $("orRef").textContent = `${o.id} · ${when(o.created_at)}`;
-    const tb = mk("table", "cr-table"), cap = mk("caption", null, "Cuotas"), body = mk("tbody");
-    for (const c of o.installments) { const tr = mk("tr"); tr.append(mk("td", "num", String(c.n)), mk("td", null, crDate(c.due_date)), mk("td", "num", money(c.amount_minor, o.currency))); body.append(tr); }
-    tb.append(cap, body);
-    $("orBody").replaceChildren(sumList([["Inicial", money(o.down_minor, o.currency)], ["Financiado", money(o.financed_minor, o.currency)], ["Intereses", "Sin intereses (demo)"], ["Total", money(o.price_minor, o.currency), "tot"]]), tb);
+    const long = o.n > 12;
+    const rows = [["Inicial", money(o.down_minor, o.currency)], ["Financiado", money(o.financed_minor, o.currency)]];
+    if (long) rows.push(["Cuota estimada", `${money(o.installments[0]?.amount_minor, o.currency)} al mes, ${o.n} meses`]);
+    rows.push(["Intereses", o.piso === 3 ? "Los define el banco" : "Sin intereses (demo)"], ["Total", money(o.price_minor, o.currency), "tot"]);
+    const parts = [sumList(rows)];
+    if (!long) {
+      const tb = mk("table", "cr-table"), body = mk("tbody");
+      for (const c of o.installments) { const tr = mk("tr"); tr.append(mk("td", "num", String(c.n)), mk("td", null, crDate(c.due_date)), mk("td", "num", money(c.amount_minor, o.currency))); body.append(tr); }
+      tb.append(mk("caption", null, "Cuotas"), body);
+      parts.push(tb);
+    }
+    $("orBody").replaceChildren(...parts);
   },
 };
 $("orCancel").addEventListener("click", () => {
@@ -1737,7 +1735,7 @@ async function handleLocal(text) {
   if (/saldo|cuanto tengo|balance/.test(t)) { showThinking(); const r = await refreshBalance(true); return say(r.speech); }
   if (/movimiento|historial|que he pagado/.test(t)) { driveApp(); go("movs"); showThinking(); const moves = await loadMovements(); return say(moves.length ? `Tienes ${moves.length} movimiento${moves.length > 1 ? "s" : ""}. El último: ${moves[0].title} por ${bs(Math.abs(moves[0].amount_minor))}.` : "Aún no tienes movimientos. ¿Escaneamos un ticket?"); }
   const open = (screen, text) => { driveApp(); go("home"); push(screen); say(text); };
-  if (/credi|prestamo|\bsaga\b/.test(t)) return open("crscan", "Estos son los planes de SAGA. Elige uno y armamos tu orden de compra.");
+  if (/credi|prestamo|\bsaga\b|conduce|propiedash/.test(t)) return open("crscan", "Puedes armar tu orden con SAGA (Los Roques), Conduce (un carro) o Propiedash (un apartamento). Elige una.");
   if (/recarg|deposit|agrega.*saldo/.test(t)) {
     const a = amountOf(t);
     if (a) return prepareLocal("prepare_topup", { method: /banco de venezuela|bdv/.test(t) ? "bdv" : /humaniz/.test(t) ? "humaniz" : /nacional/.test(t) ? "cuentas_nacionales" : "pago_movil", amount_minor: a });
@@ -1784,12 +1782,12 @@ async function handleLocal(text) {
 // Ningún modelo decide dinero ni crédito: solo elige la acción; el usuario confirma con su huella.
 const CREDIT_ASK = /credit|credirecto|cuota|financ|prestamo|\blinea\b|\binicial\b|\bintereses?\b|rechaz|\bpin\b|\bclave\b/;
 const CREDIT_STRONG = /credit|credirecto|cuota|financ|prestamo|hipoteca/;
-const CREDIT_WEAK = /viaje|roques|margarita|merida|\bsaga\b/;
+const CREDIT_WEAK = /roques|\bsaga\b|conduce|\bcarro\b|corolla|propiedash|apartamento/;
 // «Escanea mis créditos» y los nombres de aliados van al escáner; «mi Credirecto» o «cuánto debo», a la línea de la wallet.
 const CREDIT_SCAN = /escane|escaneo|revisa|busca|ofertas|que (puedo|credito)|cuanto (puedo|me)/;
 const CREDIT_WALLET = /cuanto debo|deuda|mi credirecto|mi linea|abonar|abono/;
 const OTHER_FLOW = /estacionamiento|parking|ticket|saldo|movimiento|historial|don(a|ar|aci)|envi|transfer|corpoelec|digitel|movistar|movilnet|cantv|\bluz\b/;
-const CREDIT_OFFERS = [[/roques/, "saga_roques"], [/merida/, "saga_merida"], [/margarita/, "saga_margarita"]];
+const CREDIT_OFFERS = [[/roques|\bsaga\b/, "saga_roques"], [/conduce|\bcarro\b|corolla/, "conduce_corolla"], [/propiedash|apartamento/, "propiedash_apto"]];
 const NEXT_HINT = { usar: "Elige tus cuotas y toca «Armar orden de compra».", subir_nivel: "Todavía no la tienes disponible." };
 
 /** Abre la oferta pedida (por id o por vertical) y la explica con el motivo del motor. */
@@ -1806,7 +1804,7 @@ async function openCreditOffer({ offer_id, vertical } = {}, reply) {
 /** Abre Credirecto; con scanIt además escanea y resume lo que encontró. */
 async function openCreditHome(_scanIt, reply) {
   driveApp(); go("home"); push("crscan");
-  say(reply && !/escaneo|muestro/i.test(reply) ? reply : "Estos son los planes de SAGA. Elige uno y armamos tu orden de compra.");
+  say(reply && !/escaneo|muestro/i.test(reply) ? reply : "Puedes armar tu orden con SAGA (Los Roques), Conduce (un carro) o Propiedash (un apartamento). Elige una.");
 }
 /** N0: crédito por reglas. Devuelve true si lo resolvió (sin modelo). */
 async function creditN0(text) {

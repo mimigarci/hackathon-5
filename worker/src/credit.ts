@@ -51,9 +51,9 @@ export const CATALOG: CatalogItem[] = [
   { offer_id: "event_ticket", piso: 1, vertical: "boleteria", partner: "Pago Directo", title: "Entrada a un concierto en el Poliedro", detail: "Asegura tu entrada hoy y págala en cuotas.", currency: "VES", price_minor: 90000 },
   { offer_id: "tugruero_plan", piso: 1, vertical: "asistencia_vial", partner: "TuGruero", title: "Plan anual de grúa y asistencia vial", detail: "Asistencia vial todo el año, pagada en cuotas.", currency: "VES", price_minor: 110000 },
   { offer_id: "mercantil_rcv", piso: 1, vertical: "seguros", partner: "Seguros Mercantil", title: "Póliza RCV para tu carro", detail: "Responsabilidad civil de vehículos en cuotas sin interés.", currency: "VES", price_minor: 140000 },
-  { offer_id: "saga_roques", piso: 2, vertical: "turismo", partner: "SAGA", title: "Los Roques: 3 días con posada y traslados", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 480000 },
-  { offer_id: "saga_merida", piso: 2, vertical: "turismo", partner: "SAGA", title: "Mérida: posada y experiencia de montaña", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 260000 },
-  { offer_id: "saga_margarita", piso: 2, vertical: "turismo", partner: "SAGA", title: "Margarita: 2 noches de hospedaje", detail: "Hospedaje de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 180000 },
+  { offer_id: "saga_roques", piso: 2, vertical: "turismo", partner: "SAGA", title: "Los Roques: 3 días con posada y traslados", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "USD", price_minor: 48000 },
+  { offer_id: "saga_merida", piso: 2, vertical: "turismo", partner: "SAGA", title: "Mérida: posada y experiencia de montaña", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "USD", price_minor: 26000 },
+  { offer_id: "saga_margarita", piso: 2, vertical: "turismo", partner: "SAGA", title: "Margarita: 2 noches de hospedaje", detail: "Hospedaje de SAGA con inicial y cuotas quincenales.", currency: "USD", price_minor: 18000 },
   { offer_id: "conduce_corolla", piso: 3, vertical: "vehiculo", partner: "Conduce", title: "Toyota Corolla 2019", detail: "Vehículo de Conduce. Crédito de un banco aliado; Pago Directo solo precalifica.", currency: "USD", price_minor: 1450000 },
   { offer_id: "propiedash_apto", piso: 3, vertical: "inmueble", partner: "Propiedash", title: "Apartamento de 2 habitaciones en Caracas", detail: "Inmueble de Propiedash. Crédito de un banco aliado; Pago Directo solo precalifica.", currency: "USD", price_minor: 4800000 },
 ];
@@ -65,9 +65,9 @@ export const lineOf = (piso: Piso): LineKey | null => (piso === 1 ? "cotidiano" 
 const COTIDIANO_LIMIT: Record<Level, number> = { Turista: CREDIT_LIMIT_MINOR, Explorador: CREDIT_LIMIT_MINOR * 2, Embajador: CREDIT_LIMIT_MINOR * 4 };
 // El contrato fija Turista y Explorador; Embajador es una extrapolación (ver informe).
 const TURISMO_RULE: Record<Level, { pct: number; limit: number }> = {
-  Turista: { pct: 40, limit: 300000 },
-  Explorador: { pct: 20, limit: 600000 },
-  Embajador: { pct: 10, limit: 1000000 },
+  Turista: { pct: 40, limit: 30000 },
+  Explorador: { pct: 20, limit: 60000 },
+  Embajador: { pct: 10, limit: 100000 },
 };
 const TURISMO_MIN_ONTIME = 6;
 const PATRIMONIO_MIN_MONTHS = 3;
@@ -136,8 +136,8 @@ function evaluate(c: CatalogItem, state: CreditState): Evaluation {
     if (state.ontime_payments < TURISMO_MIN_ONTIME)
       return reject(`Rechazado: pides ${TURISMO_MIN_ONTIME} pagos a tiempo para financiar turismo y llevas ${state.ontime_payments}`, "credit_rejected", rule.pct, down, financed);
     if (financed > avail)
-      return reject(`Rechazado: financiar ${bs(financed)} supera tu línea de turismo disponible de ${bs(avail)}`, "credit_over_limit", rule.pct, down, financed);
-    return { status: "disponible", eligible: true, code: null, reason: `Aprobado: financias ${bs(financed)} con una inicial de ${bs(down)} (${rule.pct} %), y cabe en tu línea de turismo disponible de ${bs(avail)}`, down_pct: rule.pct, down, financed };
+      return reject(`Rechazado: financiar ${usd(financed)} supera tu línea de turismo disponible de ${usd(avail)}`, "credit_over_limit", rule.pct, down, financed);
+    return { status: "disponible", eligible: true, code: null, reason: `Aprobado: financias ${usd(financed)} con una inicial de ${usd(down)} (${rule.pct} %), y cabe en tu línea de turismo disponible de ${usd(avail)}`, down_pct: rule.pct, down, financed };
   }
   const pct = c.vertical === "vehiculo" ? 30 : 20;
   const down = Math.round((c.price_minor * pct) / 100);
@@ -188,9 +188,10 @@ export function scanOffers(state: CreditState, _now: Date) {
   return { offers, summary };
 }
 
-/** Lo que ve el usuario: SAGA centraliza el crédito. El resto del catálogo no se ofrece. */
-export function scanSaga(state: CreditState, now: Date) {
-  const offers = scanOffers(state, now).offers.filter((o) => o.partner === "SAGA");
+/** Lo que ve el usuario: una opción por aliado. El resto del catálogo no se ofrece. */
+export const ORDER_OFFERS = ["saga_roques", "conduce_corolla", "propiedash_apto"];
+export function scanOrderOffers(state: CreditState, now: Date) {
+  const offers = ORDER_OFFERS.map((id) => scanOffers(state, now).offers.find((o) => o.offer_id === id)!);
   const summary = { disponible: 0, precalificado: 0, por_desbloquear: 0 };
   for (const o of offers) summary[o.status]++;
   return { offers, summary };
