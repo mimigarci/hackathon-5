@@ -20,6 +20,8 @@ export function installFeatures(ctx) {
     for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
     return e;
   }
+  // replaceChildren pintaría null como texto; los hijos opcionales se filtran aquí.
+  const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter((c) => c != null && c !== false));
   const icon = (id, size = 22) => h("span", { html: `<svg width="${size}" height="${size}" aria-hidden="true"><use href="#${id}"/></svg>` }).firstChild;
   const btn = (label, onclick, cls = "btn btn-primary btn-block") => h("button", { type: "button", class: cls, onclick }, label);
   const row = (ic, title, sub, onclick, extra) =>
@@ -89,7 +91,7 @@ export function installFeatures(ctx) {
     enter(p = {}) {
       const pg = page("deposit");
       if (!p.method) {
-        pg.replaceChildren(h("h2", {}, "¿Cómo deseas recargar tu wallet?"),
+        fill(pg, h("h2", {}, "¿Cómo deseas recargar tu wallet?"),
           h("div", { class: "rowlist" }, METHODS.map(([ref, name, sub]) => h("button", { type: "button", class: "item method", onclick: () => S.deposit.enter({ method: ref, amount_minor: p.amount_minor }) },
             h("span", { class: "ic" }, icon("i-bank")), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, sub)), h("span", { html: '<svg class="chev"><use href="#i-chev"/></svg>' }).firstChild))),
           h("p", { class: "hint" }, "Recarga simulada: en esta demo no se mueve dinero real."));
@@ -98,7 +100,7 @@ export function installFeatures(ctx) {
       const name = METHODS.find((m) => m[0] === p.method)?.[1] ?? "Pago Móvil";
       const go = h("button", { type: "button", class: "btn btn-primary btn-block" }, "Recargar");
       const paint = () => { const a = parseBs($("depAmt").value); go.textContent = a ? `Recargar ${bs(a)}` : "Recargar"; };
-      pg.replaceChildren(
+      fill(pg, 
         h("div", { class: "picked" }, icon("i-bank", 26), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, "Llega al instante a tu wallet"))),
         moneyField("depAmt", p.amount_minor ?? 500_00, "Monto a recargar", "Máximo Bs 10.000 por recarga."),
         amountChips([100_00, 500_00, 1_000_00, 2_000_00], "depAmt", paint),
@@ -126,13 +128,13 @@ export function installFeatures(ctx) {
   S.credit = {
     async enter(p = {}) {
       const pg = page("credit");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       await refreshCredit();
       const c = state.credit;
-      if (!c) return pg.replaceChildren(emptyPlain("No pudimos cargar Credirecto", "Revisa tu conexión e inténtalo de nuevo."));
+      if (!c) return fill(pg, emptyPlain("No pudimos cargar Credirecto", "Revisa tu conexión e inténtalo de nuevo."));
       const req = h("button", { type: "button", class: "btn btn-primary btn-block" }, "Solicitar");
       const paintReq = () => { const a = parseBs($("crAmt").value); req.textContent = a ? `Solicitar ${bs(a)}` : "Solicitar"; req.disabled = !a || a > c.available_minor; };
-      pg.replaceChildren(
+      fill(pg, 
         h("div", { class: "credi", style: "min-height:170px" },
           h("span", { class: "brand", html: '<i aria-hidden="true"></i>Credirecto' }),
           h("small", { style: "margin-top:auto" }, "Disponible"),
@@ -170,7 +172,7 @@ export function installFeatures(ctx) {
       const pg = page("vehicles");
       const list = plates();
       const input = h("input", { class: "input", id: "plateIn", maxlength: "7", placeholder: "Ej. AB123CD", autocomplete: "off", autocapitalize: "characters", style: "text-transform:uppercase" });
-      pg.replaceChildren(
+      fill(pg, 
         list.length ? h("div", { class: "list" }, list.map((pl) => row("i-car", pl, "Vehículo particular", null,
           h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: () => { storeJSON.set("pd.plates", plates().filter((x) => x !== pl)); S.vehicles.enter(); } }, "Quitar")))) : emptyPlain("Sin vehículos", "Registra tu placa para pagar parquímetros más rápido."),
         h("form", { class: "card", onsubmit: (e) => {
@@ -202,7 +204,7 @@ export function installFeatures(ctx) {
       setTabs("meter", "park", (t) => (t === "park" ? S.meter.enter() : t === "vehicles" ? push("vehicles") : t === "places" ? push("locations") : S.meter.history()));
       clearInterval(meterTick);
       const pg = page("meter");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const [zones, act] = await Promise.all([catalog("parquimetros"), activeMeter()]);
       if (act && !p.product_ref) {
         const t = h("b", { class: "num" }, "");
@@ -214,7 +216,7 @@ export function installFeatures(ctx) {
           bar.style.width = `${Math.round((1 - left / (act.end - act.start)) * 100)}%`;
           if (!left) { clearInterval(meterTick); S.meter.enter(); }
         };
-        pg.replaceChildren(stepper(["Ubicación", "Gestión y pago", "En uso", "Finalizado"], 2),
+        fill(pg, stepper(["Ubicación", "Gestión y pago", "En uso", "Finalizado"], 2),
           h("div", { class: "timer" }, h("small", {}, `${act.details?.product ?? ""} · ${act.details?.plate ?? ""}`), t, h("small", {}, "Tiempo restante"), h("div", { class: "meter" }, bar)),
           btn("Extender 1 hora", (e) => runPrepare("prepare_purchase", { product_ref: act.details?.product_ref, quantity: 1, plate: act.details?.plate }, e.currentTarget)),
           h("p", { class: "hint" }, "El parquímetro se desactiva solo al terminar el tiempo."));
@@ -236,7 +238,7 @@ export function installFeatures(ctx) {
       };
       minus.onclick = () => { hours = Math.max(1, hours - 1); paint(); };
       plus.onclick = () => { hours = Math.min(8, hours + 1); paint(); };
-      pg.replaceChildren(stepper(["Ubicación", "Gestión y pago", "En uso", "Finalizado"], 0),
+      fill(pg, stepper(["Ubicación", "Gestión y pago", "En uso", "Finalizado"], 0),
         h("h2", {}, "Elige la zona"),
         h("div", { class: "list", role: "radiogroup", "aria-label": "Zona" }, zones.map((z) => h("button", { type: "button", class: "opt", role: "radio", "data-ref": z.product_ref, onclick: () => { zone = z.product_ref; paint(); } },
           h("span", { class: "dot", "aria-hidden": "true" }), h("span", { class: "tx", style: "flex:1" }, h("b", {}, z.name), h("small", { style: "display:block;color:var(--ink-2)" }, z.detail)), h("span", { class: "num" }, `${bs(z.price_minor)}/h`)))),
@@ -259,7 +261,7 @@ export function installFeatures(ctx) {
       setTabs("meter", "history", (t) => (t === "park" ? S.meter.enter() : t === "vehicles" ? push("vehicles") : t === "places" ? push("locations") : S.meter.history()));
       clearInterval(meterTick);
       const ms = (await moves()).filter((m) => m.kind === "parking_meter");
-      page("meter").replaceChildren(h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus parquímetros pagados."));
+      fill(page("meter"), h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus parquímetros pagados."));
     },
     leave() { clearInterval(meterTick); },
   };
@@ -271,12 +273,12 @@ export function installFeatures(ctx) {
       const nav = (t) => (t === "buy" ? S.insurance.enter() : S.insurance.mine(t));
       setTabs("insurance", "buy", nav);
       const pg = page("insurance");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const items = await catalog("seguros");
       let type = p.type ?? (items.find((i) => i.product_ref === p.product_ref)?.type) ?? "vehiculos";
       const render = () => {
         const sel = p.product_ref && items.find((i) => i.product_ref === p.product_ref);
-        pg.replaceChildren(stepper(["Tipo", "Pólizas", "Coberturas"], sel ? 2 : 1),
+        fill(pg, stepper(["Tipo", "Pólizas", "Coberturas"], sel ? 2 : 1),
           h("div", { class: "seg", role: "tablist", "aria-label": "Tipo de seguro" },
             [["vehiculos", "Vehículos"], ["personas", "Personas"]].map(([k, l]) => h("button", { type: "button", role: "tab", "aria-selected": String(type === k), onclick: () => { type = k; p = {}; render(); } }, l))),
           h("div", { class: "list" }, items.filter((i) => i.type === type).map((i) => h("button", { type: "button", class: "item", onclick: () => { p = { product_ref: i.product_ref }; render(); } },
@@ -292,9 +294,9 @@ export function installFeatures(ctx) {
       setTabs("insurance", tab, (t) => (t === "buy" ? S.insurance.enter() : S.insurance.mine(t)));
       const ms = (await moves()).filter((m) => m.kind === "insurance");
       const pg = page("insurance");
-      if (tab === "history") return pg.replaceChildren(h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás los pagos de tus pólizas."));
+      if (tab === "history") return fill(pg, h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás los pagos de tus pólizas."));
       const active = ms.filter((m) => Date.now() - m.created_at * 1000 < 30 * 86400_000);
-      pg.replaceChildren(h("h2", {}, "Mis pólizas"), active.length ? h("div", { class: "list" }, active.map((m) => row("i-shield", m.details?.product ?? m.title, `Activa hasta ${new Date(m.created_at * 1000 + 30 * 86400_000).toLocaleDateString("es-VE", { day: "2-digit", month: "short" })}`, null, h("span", { class: "pill-state ok" }, "Activa")))) : emptyPlain("Sin pólizas", "Contrata una póliza y aparecerá aquí."));
+      fill(pg, h("h2", {}, "Mis pólizas"), active.length ? h("div", { class: "list" }, active.map((m) => row("i-shield", m.details?.product ?? m.title, `Activa hasta ${new Date(m.created_at * 1000 + 30 * 86400_000).toLocaleDateString("es-VE", { day: "2-digit", month: "short" })}`, null, h("span", { class: "pill-state ok" }, "Activa")))) : emptyPlain("Sin pólizas", "Contrata una póliza y aparecerá aquí."));
     },
   };
 
@@ -304,14 +306,14 @@ export function installFeatures(ctx) {
     async enter(p = {}) {
       setTabs("tickets", "avail", (t) => (t === "avail" ? S.tickets.enter() : S.tickets.mine(t)));
       const pg = page("tickets");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const evs = await catalog("boleteria");
       let sel = p.product_ref, qty = p.quantity ?? 1;
       const render = () => {
         const e = evs.find((x) => x.product_ref === sel);
         const out = h("output", {}, String(qty));
         const buy = e ? btn(`Comprar ${bs(e.price_minor * qty)}`, (ev) => (p.intent_id && p.product_ref === sel && p.quantity === qty ? ctx.confirmOp(p.intent_id, "ui") : runPrepare("prepare_purchase", { product_ref: sel, quantity: qty }, ev.currentTarget))) : null;
-        pg.replaceChildren(h("h2", {}, "Próximos eventos"),
+        fill(pg, h("h2", {}, "Próximos eventos"),
           h("div", { class: "list" }, evs.map((x) => h("button", { type: "button", class: "item", "aria-pressed": String(x.product_ref === sel), style: x.product_ref === sel ? "box-shadow:inset 0 0 0 2px var(--pd),var(--shadow-card)" : null, onclick: () => { sel = x.product_ref; qty = 1; render(); } },
             h("span", { class: "ic" }, icon("i-ticket")), h("span", { class: "tx" }, h("b", {}, x.name), h("small", {}, x.detail)), h("span", { class: "amt num" }, bs(x.price_minor))))),
           e ? h("div", { class: "card" }, h("div", { class: "line" }, h("b", {}, "Boletos"),
@@ -326,8 +328,8 @@ export function installFeatures(ctx) {
       setTabs("tickets", tab, (t) => (t === "avail" ? S.tickets.enter() : S.tickets.mine(t)));
       const ms = (await moves()).filter((m) => m.kind === "tickets");
       const pg = page("tickets");
-      if (tab === "history") return pg.replaceChildren(h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus compras de boletos."));
-      pg.replaceChildren(h("h2", {}, "Mis boletos"));
+      if (tab === "history") return fill(pg, h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus compras de boletos."));
+      fill(pg, h("h2", {}, "Mis boletos"));
       if (!ms.length) return pg.append(emptyPlain("Sin boletos", "Compra un boleto y aparecerá aquí con su código QR."));
       for (const m of ms) {
         const qr = h("div", { class: "qrbox" });
@@ -358,7 +360,7 @@ export function installFeatures(ctx) {
     enter() {
       const box = h("div", { class: "qr-big" });
       const user = ctx.user();
-      page("qr").replaceChildren(h("div", { style: "text-align:center" }, box, h("h2", { style: "font-size:22px" }, user), h("p", { class: "hint" }, "Muestra este código para recibir pagos en tu wallet.")),
+      fill(page("qr"), h("div", { style: "text-align:center" }, box, h("h2", { style: "font-size:22px" }, user), h("p", { class: "hint" }, "Muestra este código para recibir pagos en tu wallet.")),
         btn("Compartir", () => share(`Págame por PagoDirecto: ${user}`), "btn btn-ghost btn-block"));
       drawQR(box, `pagodirecto:${user}`);
     },
@@ -375,16 +377,16 @@ export function installFeatures(ctx) {
   S.invoices = {
     async enter() {
       const pg = page("invoices");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const ms = (await moves()).filter((m) => m.amount_minor < 0);
-      pg.replaceChildren(ms.length ? h("div", { class: "list" }, ms.map((m) => { const it = moveItem(m); it.querySelector("small").textContent = `${when(m.created_at)} · ref. ${m.operation_ref.slice(-8)}`; return it; })) : emptyPlain("Sin resultados", "Tus comprobantes aparecerán aquí."));
+      fill(pg, ms.length ? h("div", { class: "list" }, ms.map((m) => { const it = moveItem(m); it.querySelector("small").textContent = `${when(m.created_at)} · ref. ${m.operation_ref.slice(-8)}`; return it; })) : emptyPlain("Sin resultados", "Tus comprobantes aparecerán aquí."));
     },
   };
   shell("charge", "Cobrar por wallet");
   S.charge = {
     enter() {
       const concept = h("input", { class: "input", id: "chConcept", maxlength: "40", placeholder: "Ej. Almuerzo", autocomplete: "off" });
-      page("charge").replaceChildren(moneyField("chAmt", 100_00, "Monto a cobrar"),
+      fill(page("charge"), moneyField("chAmt", 100_00, "Monto a cobrar"),
         h("div", { class: "field" }, h("label", { for: "chConcept" }, "Concepto"), concept),
         btn("Compartir cobro", () => {
           const a = parseBs($("chAmt").value);
@@ -403,7 +405,7 @@ export function installFeatures(ctx) {
       const list = storeJSON.get("pd.accounts", []);
       const bank = h("select", { class: "input", id: "accBank" }, BANKS.map((b) => h("option", {}, b)));
       const last = h("input", { class: "input num", id: "accLast", inputmode: "numeric", maxlength: "4", placeholder: "1234", autocomplete: "off" });
-      page("accounts").replaceChildren(
+      fill(page("accounts"), 
         h("div", { class: "picked" }, icon("i-bank", 26), h("span", { class: "tx" }, h("b", {}, "Wallet PagoDirecto"), h("small", {}, h("span", { class: "js-bal num" }, bs(state.balance ?? 0))))),
         list.length ? h("div", { class: "list" }, list.map((a, i) => row("i-bank", a.bank, `Cuenta •••• ${a.last}`, null,
           h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: () => { const l = storeJSON.get("pd.accounts", []); l.splice(i, 1); storeJSON.set("pd.accounts", l); S.accounts.enter(); } }, "Quitar")))) : null,
@@ -424,7 +426,7 @@ export function installFeatures(ctx) {
   S.profile = {
     enter() {
       const input = h("input", { class: "input", id: "userIn", value: ctx.user(), maxlength: "21", autocomplete: "off", autocapitalize: "none" });
-      page("profile").replaceChildren(
+      fill(page("profile"), 
         h("div", { style: "text-align:center" }, h("img", { src: "/assets/pd/user_home.png", alt: "", width: "88", height: "88", style: "border-radius:50%;margin:6px auto 8px;box-shadow:0 0 0 3px var(--pd)" }), h("h2", { style: "font-size:22px" }, ctx.user()), h("p", { class: "hint" }, `Nivel Turista · ${ctx.points()} pts del Club`)),
         h("form", { class: "card", onsubmit: (e) => {
           e.preventDefault();
@@ -437,14 +439,14 @@ export function installFeatures(ctx) {
     },
   };
   shell("premium", "Planes premium");
-  S.premium = { enter() { page("premium").replaceChildren(emptyPlain("Próximamente", "Los planes premium aún no están disponibles en esta demo.")); } };
+  S.premium = { enter() { fill(page("premium"), emptyPlain("Próximamente", "Los planes premium aún no están disponibles en esta demo.")); } };
   shell("locations", "Ubicaciones disponibles");
   S.locations = {
     async enter() {
       const pg = page("locations");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const zones = await catalog("parquimetros");
-      pg.replaceChildren(h("h2", {}, "Parquímetros"), h("div", { class: "list" }, zones.map((z) => row("i-meter", z.name, `${z.detail} · ${bs(z.price_minor)}/h`, () => push("meter", { product_ref: z.product_ref })))),
+      fill(pg, h("h2", {}, "Parquímetros"), h("div", { class: "list" }, zones.map((z) => row("i-meter", z.name, `${z.detail} · ${bs(z.price_minor)}/h`, () => push("meter", { product_ref: z.product_ref })))),
         h("h2", {}, "Estacionamientos"), h("div", { class: "list" }, row("i-car", "Ticket físico", "Escanea el QR del ticket en la taquilla", () => ctx.scanFromUI())));
     },
   };
@@ -454,13 +456,13 @@ export function installFeatures(ctx) {
   S.streak = {
     async enter() {
       const pg = page("streak");
-      pg.replaceChildren(loading());
+      fill(pg, loading());
       const ms = (await moves()).filter((m) => m.amount_minor < 0);
       const now = new Date(), monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
       const week = ms.filter((m) => m.created_at * 1000 >= monday.getTime());
       const days = new Set(week.map((m) => (new Date(m.created_at * 1000).getDay() + 6) % 7));
       const today = (now.getDay() + 6) % 7, n = Math.min(3, week.length);
-      pg.replaceChildren(
+      fill(pg, 
         h("div", { class: "card" }, h("div", { class: "streak-n" }, h("b", {}, String(n)), h("span", {}, "de 3 pagos")),
           h("div", { class: "week" }, ["L", "M", "M", "J", "V", "S", "D"].map((d, i) => h("span", {}, h("i", { class: (days.has(i) ? "on" : "") + (i === today ? " today" : ""), "aria-label": `${d}: ${days.has(i) ? "con pago" : "sin pago"}` }, days.has(i) ? "✓" : ""), d))),
           h("dl", { class: "kv" }, h("div", {}, h("dt", {}, "Racha de 7 días"), h("dd", {}, `${n} / 3 pagos`)), h("div", {}, h("dt", {}, "Multiplicador"), h("dd", { style: `color:${n >= 3 ? "var(--ok)" : "var(--ink-2)"}` }, n >= 3 ? "×1,5 activo" : "Apagado")))),
@@ -475,12 +477,12 @@ export function installFeatures(ctx) {
       const pg = page("notifs");
       const tabs = h("div", { class: "seg", role: "tablist", "aria-label": "Tipo de notificación" },
         [["push", "Push"], ["coupons", "Cupones"], ["collection", "Colección"]].map(([k, l]) => h("button", { type: "button", role: "tab", "aria-selected": String(k === tab), onclick: () => S.notifs.enter(k) }, l)));
-      pg.replaceChildren(tabs, loading());
-      if (tab !== "push") return pg.replaceChildren(tabs, emptyPlain("Sin resultados", tab === "coupons" ? "No tienes cupones por ahora." : "Aún no tienes coleccionables."));
+      fill(pg, tabs, loading());
+      if (tab !== "push") return fill(pg, tabs, emptyPlain("Sin resultados", tab === "coupons" ? "No tienes cupones por ahora." : "Aún no tienes coleccionables."));
       const ms = await moves();
       store.set("pd.seen", String(Math.floor(Date.now() / 1000)));
       ctx.paintBell();
-      pg.replaceChildren(tabs, ms.length ? h("div", { class: "list" }, ms.map((m) => row("i-bell", m.amount_minor > 0 ? `Recibiste ${bs(m.amount_minor)}` : `Pagaste ${bs(-m.amount_minor)}`, `${m.title} · ${when(m.created_at)}`))) : emptyPlain("Sin resultados", "Te avisaremos de cada pago aquí."));
+      fill(pg, tabs, ms.length ? h("div", { class: "list" }, ms.map((m) => row("i-bell", m.amount_minor > 0 ? `Recibiste ${bs(m.amount_minor)}` : `Pagaste ${bs(-m.amount_minor)}`, `${m.title} · ${when(m.created_at)}`))) : emptyPlain("Sin resultados", "Te avisaremos de cada pago aquí."));
     },
   };
 
@@ -491,10 +493,10 @@ export function installFeatures(ctx) {
       const FAQ = [
         ["¿Es dinero real?", "No. Es una demo con saldo simulado de Bs 5.000. Ningún pago sale a bancos."],
         ["¿Cómo confirma Wisi un pago?", "Wisi solo prepara la operación. El pago se ejecuta cuando tú confirmas con tu huella en la hoja de confirmación."],
-        ["¿Dónde se guardan mis datos?", "Tu saldo y movimientos, en el servidor de la demo; tu perfil, vehículos y cuentas, en cookies de este navegador."],
-        ["¿Cómo empiezo de cero?", "Menú → Cerrar sesión crea una demo nueva con Bs 5.000."],
+        ["¿Dónde se guardan mis datos?", "Sin login: tu identificador, perfil, vehículos, cuentas y puntos viven en cookies de este navegador. Saldo y movimientos, en el servidor, ligados a esa cookie."],
+        ["¿Cómo empiezo de cero?", "Menú → Cerrar sesión borra tus cookies y crea una demo nueva con Bs 5.000."],
       ];
-      page("help").replaceChildren(
+      fill(page("help"), 
         h("div", { class: "rowlist" },
           row("i-chat", "Habla con Wisi", "Resuelve y paga por voz o chat", () => openWisi()),
           row("i-mail", "Abrir un caso de soporte", "Te contactamos por la app", async (e) => {
@@ -507,12 +509,28 @@ export function installFeatures(ctx) {
     },
   };
 
+  // ---------------------------------------------------------------- Jomi
+  shell("jomi", "Jomi");
+  S.jomi = {
+    enter() {
+      const CATS = [["Línea blanca", "Neveras, lavadoras y cocinas"], ["Mecánica", "Tu carro, donde estés"], ["Electricidad", "Instalaciones y averías"], ["Construcción", "Remodelaciones y albañilería"], ["Plomería", "Fugas y destapes"]];
+      fill(page("jomi"), h("h2", {}, "Pídelo acá. Con Jomi resuelves."),
+        h("div", { class: "rowlist" }, CATS.map(([name, sub]) => row("i-user", name, sub, async (e) => {
+          const b = e.currentTarget; b.disabled = true;
+          try { await callTool("create_support_case", { category: "general", summary: `Jomi: ${name}` }); toast(`Pedimos un técnico de ${name.toLowerCase()}. Te contactamos pronto.`); }
+          catch { toast("Sin conexión. Inténtalo de nuevo."); }
+          b.disabled = false;
+        }))),
+        h("p", { class: "hint" }, "Solicitud de demostración: nadie va a tu casa."));
+    },
+  };
+
   // Revisión genérica de lo que preparó Wisi (recarga, crédito, compras).
   shell("review", "Revisa y confirma", { help: false });
   S.review = {
     enter(op) {
       if (!op) return;
-      page("review").replaceChildren(
+      fill(page("review"), 
         h("div", { class: "card" }, h("p", { style: "margin:0" }, "Wisi preparó esta operación"), h("h3", { style: "font-size:20px;margin-top:4px" }, op.k.t(op.s)),
           op.k.sub(op.s) ? h("p", {}, op.k.sub(op.s)) : null,
           h("p", { class: "num", style: "font-size:32px;font-weight:700;color:var(--ink);margin-top:10px" }, bs(op.s.amount_minor ?? 0))),

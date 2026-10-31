@@ -4,14 +4,29 @@
     {
       "name": "app-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-c", "import os, runpy, sys; sys.argv = ['http.server', os.environ.get('PORT', '8765'), '--directory', 'app/build/web']; runpy.run_module('http.server', run_name='__main__')"],
+      "runtimeArgs": [
+        "-c",
+        "import os, runpy, sys; sys.argv = ['http.server', os.environ.get('PORT', '8765'), '--directory', 'app/build/web']; runpy.run_module('http.server', run_name='__main__')"
+      ],
       "port": 8765
     },
     {
       "name": "wisi-gateway",
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
-      "runtimeArgs": ["-c", "import os, uvicorn; uvicorn.run('app.main:app', app_dir='backend', port=int(os.environ.get('PORT', '8001')), reload=True, reload_dirs=['backend/app'])"],
+      "runtimeArgs": [
+        "-c",
+        "import os, uvicorn; uvicorn.run('app.main:app', app_dir='backend', port=int(os.environ.get('PORT', '8001')), reload=True, reload_dirs=['backend/app'])"
+      ],
       "port": 8001
+    },
+    {
+      "name": "wisi-worker",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd worker && eval \"$(fnm env)\" && fnm use 22 >/dev/null && npx wrangler dev --port 8787 --host localhost"
+      ],
+      "port": 8787
     }
   ]
 }

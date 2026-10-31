@@ -332,10 +332,20 @@ def list_movements(principal: str, limit: int = 20) -> ToolResponse:
             f"Tienes {len(items)} movimiento{'s' if len(items) != 1 else ''}. "
             f"El último: {last['title']} por {_bs(abs(last['amount_minor']))}."
         )
+    # El saldo inicial se lista para que la cuenta siempre cuadre con el saldo.
+    opening = {
+        "operation_ref": "op_saldo_inicial",
+        "kind": "welcome",
+        "title": "Saldo inicial de la demo",
+        "amount_minor": fixtures.INITIAL_WALLET_BALANCE_MINOR,
+        "details": {},
+        "state": "settled",
+        "created_at": ledger.account(principal).opened_at,
+    }
     return ToolResponse(
         request_id=_rid(),
         status=Status.ok,
-        data={"movements": items, "balance_minor": ledger.balance(principal)},
+        data={"movements": [*items, opening], "balance_minor": ledger.balance(principal)},
         speech=speech,
     )
 

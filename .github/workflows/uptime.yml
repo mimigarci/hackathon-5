@@ -33,5 +33,11 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://botflow.lat/)" = "301"
           T=$(c -X POST "$B/api/session?principal=uptime-bot&signed=false" | jq -r .session_token)
           c -X POST -H "Authorization: Bearer $T" $B/api/tool/get_balance | jq -e '.status == "ok"'
+          c -X POST -H "Authorization: Bearer $T" $B/api/tool/list_movements | jq -e '.status == "ok" and (.data.movements | length) >= 1'
+          c -X POST -H "Authorization: Bearer $T" $B/api/tool/get_credit | jq -e '.status == "ok"'
+          c -o /dev/null $B/assets/app/features.js
+          c -o /dev/null $B/assets/app/vendor/elevenlabs-client-0.7.1.js
+          # WebRTC: token de conversación disponible para el micrófono.
+          c -X POST "$B/api/session?principal=uptime-bot&voice=female&webrtc=true" | jq -e '.conversation_token != null'
           # Voz: la clave de ElevenLabs y el agente responden (no consume créditos hasta conectar).
           c -X POST "$B/api/session?principal=uptime-bot&voice=female" | jq -e '.voice_enabled == true'

@@ -199,10 +199,7 @@ def build_tools() -> list[dict]:
     ]
 
 
-FIRST_MESSAGE = (
-    "¡Epa! Soy Wisi. Escaneo tu ticket de estacionamiento, pago tus servicios, "
-    "dono o envío fondos, aquí mismo. ¿Qué hacemos?"
-)
+FIRST_MESSAGE = "¡Epa! Soy Wisi. ¿Qué hacemos?"
 
 
 # Palabras que el reconocimiento de voz debe esperar (marcas y servicios).

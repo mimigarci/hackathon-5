@@ -54,6 +54,7 @@ class Account:
     principal: str
     balance_minor: int
     credit_used_minor: int = 0
+    opened_at: float = field(default_factory=time.time)
     operations: list[Operation] = field(default_factory=list)
 
 

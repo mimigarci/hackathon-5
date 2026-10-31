@@ -173,7 +173,7 @@ def test_cross_user_intent_denied(client):
 def test_movements_after_confirm(client):
     h = _auth(client)
     empty = client.post("/api/tool/list_movements", headers=h, json={}).json()
-    assert empty["status"] == "ok" and empty["data"]["movements"] == []
+    assert empty["status"] == "ok" and [m["kind"] for m in empty["data"]["movements"]] == ["welcome"]
 
     prep = client.post(
         "/api/tool/prepare_parking", headers=h, json={"ticket_ref": "TCK-48213"}
@@ -188,8 +188,10 @@ def test_movements_after_confirm(client):
     assert conf["status"] == "ok" and "ticket pagado" in conf["speech"]
 
     movs = client.post("/api/tool/list_movements", headers=h, json={}).json()["data"]["movements"]
-    assert len(movs) == 1
-    assert movs[0]["kind"] == "parking"
+    assert [m["kind"] for m in movs] == ["parking", "welcome"]
+    assert sum(m["amount_minor"] for m in movs) == client.post(
+        "/api/tool/get_balance", headers=h, json={}
+    ).json()["data"]["balance_minor"]
     assert movs[0]["title"] == "Estacionamiento · TCK-48213"
     assert movs[0]["amount_minor"] == -prep["data"]["summary"]["amount_minor"]
 

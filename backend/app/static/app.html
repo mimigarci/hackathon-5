@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="/assets/app/app.css?v=8" />
+<link rel="stylesheet" href="/assets/app/app.css?v=9" />
 </head>
 <body>
 <!-- Iconos (trazo 1.8, mismo lenguaje que la app) -->
@@ -80,7 +80,7 @@
             <span style="min-width:0"><b><span class="js-user">@wisidemo</span> <svg aria-hidden="true"><use href="#i-verified"/></svg></b><small>Nivel Turista</small></span>
           </button>
           <button type="button" class="circle streak" data-push="streak" aria-label="Racha de pagos"><img src="/assets/pd/streak_flame.svg" alt="" /></button>
-          <button type="button" class="circle" data-push="notifs" aria-label="Notificaciones"><img src="/assets/pd/header_notifications.svg" alt="" /></button>
+          <button type="button" class="circle" id="bell" data-push="notifs" aria-label="Notificaciones"><img src="/assets/pd/header_notifications.svg" alt="" /></button>
           <button type="button" class="circle" data-push="help" aria-label="Asistencia"><img src="/assets/pd/header_help.svg" alt="" /></button>
         </header>
 
@@ -94,7 +94,7 @@
                 <img class="logo" src="/assets/pd/logo-pd-wallet.svg" alt="" />
                 <div>
                   <div class="lbl"><span>Saldo disponible</span><button type="button" class="eye js-eye" aria-label="Ocultar saldo" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
-                  <div class="amt num js-bal" aria-live="polite">Bs 5.000,00</div>
+                  <div class="amt num js-bal" aria-live="polite">Bs ···</div>
                 </div>
               </div>
               <div class="wallet-acts">
@@ -114,27 +114,26 @@
           </button>
         </div>
 
+        <button type="button" class="low-bal" id="lowBal" data-push="deposit" hidden><svg aria-hidden="true"><use href="#i-plus"/></svg><span><b>Tu saldo está bajo</b>Recarga y gana +50 pts del Club</span><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></button>
+
         <section class="sec" aria-labelledby="h-club">
           <div class="sec-h"><h2 id="h-club">Club PagoDirecto</h2><span class="demo-tag js-points">0 pts</span></div>
-          <div class="club-row" id="clubRow">
-            <article class="tip" data-task="wisi">
-              <div class="pic"><img src="/assets/wisi_avatar.png" alt="" /></div>
-              <div><div class="head-row"><h3>Habla con Wisi</h3><span class="pts">+100 pts</span></div>
-                <p>Paga diciendo «escanea mi ticket» o «paga la luz». Tú confirmas con huella.</p></div>
-              <div class="row"><button type="button" class="btn btn-primary btn-sm" data-voice><svg width="18" height="18" aria-hidden="true"><use href="#i-mic"/></svg>Hablar</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-ask="Escanea el QR de mi ticket de estacionamiento"><svg width="18" height="18" aria-hidden="true"><use href="#i-qr"/></svg>Escanear QR</button></div>
-            </article>
-            <article class="tip" data-task="key">
+          <div class="hrow" id="clubRow">
+            <article class="club" data-task="key">
               <div class="pic"><svg aria-hidden="true"><use href="#i-key"/></svg></div>
-              <div><div class="head-row"><h3>Llave de acceso</h3><span class="pts">+250 pts</span></div>
-                <p>Activa, protege tu cuenta y gana puntos del Club.</p></div>
-              <div class="row one"><button type="button" class="btn btn-primary btn-sm" data-task-go="key">Completar</button></div>
+              <div class="club-b">
+                <div class="club-t"><h3>Llave de acceso</h3><b class="num">+250 pts</b></div>
+                <p>Activa, protege tu cuenta y gana puntos del Club.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-task-go="key">Completar</button>
+              </div>
             </article>
-            <article class="tip" data-task="car">
+            <article class="club" data-task="car">
               <div class="pic"><svg aria-hidden="true"><use href="#i-car"/></svg></div>
-              <div><div class="head-row"><h3>Verifica tu vehículo</h3><span class="pts">+250 pts</span></div>
-                <p>Registra tu placa y gana puntos del Club.</p></div>
-              <div class="row one"><button type="button" class="btn btn-primary btn-sm" data-task-go="car">Completar</button></div>
+              <div class="club-b">
+                <div class="club-t"><h3>Verifica tu vehículo</h3><b class="num">+250 pts</b></div>
+                <p>Registra tu placa y gana puntos del Club.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-task-go="car">Completar</button>
+              </div>
             </article>
           </div>
         </section>
@@ -183,7 +182,7 @@
           <button type="button" class="circle" id="movsRefresh" aria-label="Actualizar movimientos"><svg><use href="#i-refresh"/></svg></button></header>
         <div class="sec" style="margin-top:6px">
           <div class="total" style="background:linear-gradient(140deg,var(--wallet-a),var(--wallet-b))">
-            <small>Saldo disponible</small><b class="num js-bal">Bs 5.000,00</b><p>Wallet PagoDirecto · saldo simulado</p>
+            <small>Saldo disponible</small><b class="num js-bal">Bs ···</b><p>Wallet PagoDirecto · saldo simulado</p>
             <div class="wallet-acts" style="padding-top:14px">
               <button type="button" data-push="qr"><span class="ic"><svg width="22" height="22"><use href="#i-qr"/></svg></span>Código QR</button>
               <button type="button" data-push="invoices"><span class="ic"><svg width="22" height="22"><use href="#i-receipt"/></svg></span>Facturas</button>
@@ -376,7 +375,7 @@
       <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Enviar Wallet</h1><span></span></header>
       <div class="scroll" style="padding:12px var(--gutter) 24px">
         <form class="form" id="sendForm" novalidate>
-          <div class="picked"><span class="tx"><b>Desde tu wallet</b><small>Saldo disponible · <span class="js-bal num">Bs 5.000,00</span></small></span></div>
+          <div class="picked"><span class="tx"><b>Desde tu wallet</b><small>Saldo disponible · <span class="js-bal num">Bs ···</span></small></span></div>
           <div class="field"><label for="sendAmt">Monto a enviar</label>
             <div class="money"><input class="input" id="sendAmt" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-describedby="sendAmtHint" /></div>
             <span class="hint" id="sendAmtHint">Entre wallets PagoDirecto no hay comisión y llega al instante.</span></div>
@@ -448,6 +447,8 @@
       <button type="button" class="chip" data-say="¿Cuál es mi saldo?">Mi saldo</button>
       <button type="button" class="chip" data-say="Paga la luz de Corpoelec, contrato 0001-2345">Pagar la luz</button>
       <button type="button" class="chip" data-say="Envía 250 bolívares a @maria">Enviar a @maria</button>
+      <button type="button" class="chip" data-say="Quiero recargar mi wallet">Recargar</button>
+      <button type="button" class="chip" data-say="¿Cuánto tengo disponible en Credirecto?">Credirecto</button>
       <button type="button" class="chip" data-say="Dona 50 bolívares a Fundana">Donar</button>
       <button type="button" class="chip" data-say="Muéstrame mis movimientos">Movimientos</button>
     </div>
@@ -470,6 +471,7 @@
       <p class="sub" id="cfSub"></p>
       <p class="big num" id="cfAmt"></p>
       <dl id="cfList"></dl>
+      <div class="short" id="cfShort" hidden></div>
       <button type="button" class="bio" id="cfOk"><svg aria-hidden="true"><use href="#i-finger"/></svg><span id="cfOkTxt">Confirmar con huella</span></button>
       <button type="button" class="cancel" id="cfNo">Cancelar</button>
       <p class="lock"><svg aria-hidden="true"><use href="#i-lock"/></svg>Aprobación segura de PagoDirecto</p>
@@ -498,6 +500,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script type="module" src="/assets/app/app.js?v=8"></script>
+<script type="module" src="/assets/app/app.js?v=9"></script>
 </body>
 </html>

@@ -7,48 +7,21 @@ from __future__ import annotations
 
 # Catálogo de servicios pagables (mapea a /customer/services/information).
 SERVICES = [
-    {
-        "service_ref": "digitel",
-        "name": "Digitel",
-        "category": "telefonia",
-        "needs_account": True,
-        "sample_pending_minor": 450_00,
-    },
-    {
-        "service_ref": "movistar",
-        "name": "Movistar",
-        "category": "telefonia",
-        "needs_account": True,
-        "sample_pending_minor": 320_00,
-    },
-    {
-        "service_ref": "movilnet",
-        "name": "Movilnet",
-        "category": "telefonia",
-        "needs_account": True,
-        "sample_pending_minor": 210_00,
-    },
-    {
-        "service_ref": "corpoelec",
-        "name": "Corpoelec (luz)",
-        "category": "electricidad",
-        "needs_account": True,
-        "sample_pending_minor": 180_00,
-    },
-    {
-        "service_ref": "cantv",
-        "name": "CANTV (internet/teléfono)",
-        "category": "internet",
-        "needs_account": True,
-        "sample_pending_minor": 260_00,
-    },
-    {
-        "service_ref": "condominio",
-        "name": "Condominio",
-        "category": "condominio",
-        "needs_account": True,
-        "sample_pending_minor": 1_200_00,
-    },
+    {"service_ref": "digitel", "name": "Digitel", "category": "telefonia", "needs_account": True, "sample_pending_minor": 450_00},
+    {"service_ref": "movilnet", "name": "Movilnet", "category": "telefonia", "needs_account": True, "sample_pending_minor": 210_00},
+    {"service_ref": "movistar", "name": "Movistar", "category": "telefonia", "needs_account": True, "sample_pending_minor": 320_00},
+    {"service_ref": "simpletv", "name": "SimpleTV", "category": "tv", "needs_account": True, "sample_pending_minor": 380_00},
+    {"service_ref": "inter", "name": "Inter", "category": "internet", "needs_account": True, "sample_pending_minor": 420_00},
+    {"service_ref": "cantv", "name": "CANTV (internet/teléfono)", "category": "internet", "needs_account": True, "sample_pending_minor": 260_00},
+    {"service_ref": "corpoelec", "name": "Corpoelec (luz)", "category": "electricidad", "needs_account": True, "sample_pending_minor": 180_00},
+    {"service_ref": "thundernet", "name": "ThunderNet", "category": "internet", "needs_account": True, "sample_pending_minor": 340_00},
+    {"service_ref": "tugruero", "name": "TuGruero", "category": "asistencia", "needs_account": True, "sample_pending_minor": 550_00},
+    {"service_ref": "dlm", "name": "DLM", "category": "asistencia", "needs_account": True, "sample_pending_minor": 300_00},
+    {"service_ref": "globalsystem", "name": "Global System GPS", "category": "asistencia", "needs_account": True, "sample_pending_minor": 280_00},
+    {"service_ref": "starmoviles", "name": "StarMoviles Corp.", "category": "telefonia", "needs_account": True, "sample_pending_minor": 240_00},
+    {"service_ref": "fibex", "name": "FIBEX", "category": "internet", "needs_account": True, "sample_pending_minor": 390_00},
+    {"service_ref": "jomi", "name": "Jomi", "category": "hogar", "needs_account": True, "sample_pending_minor": 0},
+    {"service_ref": "condominio", "name": "Condominio", "category": "condominio", "needs_account": True, "sample_pending_minor": 1200_00},
 ]
 
 # Fundaciones para donar (mapea a /donations/foundations).

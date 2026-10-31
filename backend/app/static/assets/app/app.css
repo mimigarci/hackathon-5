@@ -743,7 +743,7 @@ button.item:active { transform: scale(.98); }
 .credi {
   position: relative; overflow: hidden; border-radius: 24px; min-height: 196px;
   padding: 18px; color: #fff; display: flex; flex-direction: column;
-  background: radial-gradient(120% 90% at 100% 100%, #b8f02b 0%, #7dbb12 22%, #1d2a06 55%, #0b0d0a 75%);
+  background: linear-gradient(150deg, #1c1c1c 0%, #1f2210 52%, #7da50f 86%, var(--lime) 100%);
 }
 .credi .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 19px; }
 .credi .brand i { width: 30px; height: 18px; border: 3.5px solid var(--lime); border-radius: 9px; border-left-color: transparent; transform: rotate(-12deg); }
@@ -834,3 +834,39 @@ button.item:active { transform: scale(.98); }
 .empty-plain b { display: block; color: var(--ink); font-weight: 600; font-size: 17px; margin-bottom: 4px; }
 .pill-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .voice-pill { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Club PagoDirecto (como la app: icono, puntos a la derecha y botón abajo) */
+.club { display: grid; grid-template-columns: 64px 1fr; gap: 14px; background: var(--surface); border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow-card); }
+.club .pic { width: 64px; height: 64px; border-radius: 18px; background: var(--bg); color: var(--pd); display: grid; place-items: center; }
+.club .pic svg { width: 32px; height: 32px; }
+.club-b { display: flex; flex-direction: column; min-width: 0; }
+.club-t { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.club-t h3 { font-size: 16px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-t b { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.club p { font-size: 14px; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
+.club .btn { align-self: flex-end; margin-top: 10px; }
+.club.done .btn { background: var(--surface-2); color: var(--ink-2); box-shadow: none; }
+.club.done .club-t b { color: var(--ok); }
+
+/* incentivo de saldo bajo */
+.low-bal { display: flex; align-items: center; gap: 12px; width: calc(100% - var(--gutter) * 2); margin: 14px var(--gutter) 0; padding: 12px 14px; border-radius: var(--r-md); background: #fff6e8; color: #6b4a14; text-align: left; font-size: 14px; }
+.low-bal[hidden] { display: none; }
+.low-bal > svg:first-child { width: 22px; height: 22px; color: #8a5300; flex: none; }
+.low-bal span { flex: 1; min-width: 0; }
+.low-bal b { display: block; color: #8a5300; font-weight: 600; }
+.low-bal .chev { width: 18px; height: 18px; flex: none; }
+.short[hidden] { display: none; }
+.sheet .bio[hidden] { display: none; }
+
+/* campana con novedades */
+#bell { position: relative; }
+#bell.dot::after { content: ""; position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--pd); box-shadow: 0 0 0 2px var(--surface); }
+
+.chips[hidden] { display: none; }
+/* La hoja crece con la conversación: compacta al abrir, alta si hay mucho que leer. */
+.wisi { height: auto; max-height: min(600px, 74%); }
+.wisi.tall { height: calc(100% - 44px - var(--safe-t)); max-height: none; }
+.wisi .chat { flex: 1 1 auto; min-height: 88px; }
+.wisi-head .who { min-width: 0; flex: 1; }
+.wisi-head .status { white-space: nowrap; }
+.screen.tab .scroll { padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 56px); }

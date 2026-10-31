@@ -131,6 +131,13 @@ export class Wallet extends DurableObject<Env> {
     return this.balanceMinor();
   }
 
+  /** Cuándo se abrió el monedero (para el movimiento de saldo inicial). */
+  async openedAt(): Promise<number> {
+    let t = await this.ctx.storage.get<number>("opened_at");
+    if (t == null) { t = Date.now() / 1000; await this.ctx.storage.put("opened_at", t); }
+    return t;
+  }
+
   async creditUsed(): Promise<number> {
     return (await this.ctx.storage.get<number>("credit_used")) ?? 0;
   }
@@ -325,7 +332,12 @@ const tools = {
     const speech = last
       ? `Tienes ${movements.length} movimiento${movements.length !== 1 ? "s" : ""}. El último: ${last.title} por ${bs(Math.abs(last.amount_minor))}.`
       : "Aún no tienes movimientos en esta sesión.";
-    return resp("ok", speech, { movements, balance_minor: bal });
+    // El saldo inicial se lista para que la cuenta siempre cuadre con el saldo.
+    const opening = {
+      operation_ref: "op_saldo_inicial", kind: "welcome", title: "Saldo inicial de la demo", amount_minor: INITIAL_WALLET_BALANCE_MINOR,
+      state: "settled", created_at: await w.openedAt(), details: {},
+    };
+    return resp("ok", speech, { movements: [...movements, opening], balance_minor: bal });
   },
   list_catalog(section: string, type?: string | null) {
     let items = CATALOG[section];
