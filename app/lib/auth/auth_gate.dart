@@ -1,71 +1,30 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/app_state.dart';
 import '../data/repository.dart';
-import '../data/supabase_repository.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
 
-/// Where Google sends the user back after sign-in on Android/iOS. It must be
-/// registered in AndroidManifest.xml / Info.plist and in Supabase →
-/// Authentication → URL Configuration → Redirect URLs.
-const mobileAuthRedirect = 'io.pagodirecto.app://login-callback';
-
-/// Login screen until there's a session, then the app for that user.
+/// Login screen until the user taps "Ingresar", then the app on mock data.
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key, required this.supabaseReady});
-
-  /// Supabase initialized; otherwise the login enters demo mode.
-  final bool supabaseReady;
+  const AuthGate({super.key});
 
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool _demo = false;
-
-  Future<void> _signInWithGoogle() async {
-    if (!widget.supabaseReady) {
-      setState(() => _demo = true);
-      return;
-    }
-    await Supabase.instance.client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: kIsWeb ? Uri.base.origin : mobileAuthRedirect,
-      // Let people pick which Google account to use.
-      queryParams: {'prompt': 'select_account'},
-    );
-  }
+  bool _signedIn = false;
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.supabaseReady) {
-      return _demo
-          ? SignedInScope(
-              key: const ValueKey('demo'),
-              repository: MockRepository(),
-              onSignOut: () async => setState(() => _demo = false),
-              child: const MainShell(),
-            )
-          : LoginScreen(onGoogle: _signInWithGoogle, demoMode: true);
+    if (!_signedIn) {
+      return LoginScreen(onEnter: () => setState(() => _signedIn = true));
     }
-    final auth = Supabase.instance.client.auth;
-    return StreamBuilder<AuthState>(
-      stream: auth.onAuthStateChange,
-      builder: (context, _) {
-        final user = auth.currentUser;
-        if (user == null) return LoginScreen(onGoogle: _signInWithGoogle);
-        return SignedInScope(
-          // A different user gets fresh state.
-          key: ValueKey(user.id),
-          repository: SupabaseRepository(),
-          onSignOut: auth.signOut,
-          child: const MainShell(),
-        );
-      },
+    return SignedInScope(
+      repository: MockRepository(),
+      onSignOut: () async => setState(() => _signedIn = false),
+      child: const MainShell(),
     );
   }
 }

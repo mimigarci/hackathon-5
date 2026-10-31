@@ -10,7 +10,7 @@ void main() {
     }
   }
 
-  testWidgets('without Supabase, Google sign-in enters demo mode and back', (
+  testWidgets('Ingresar opens the app on mock data and Cerrar sesión goes back', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -20,10 +20,10 @@ void main() {
     await tester.pumpWidget(const PagoDirectoApp(useGoogleFonts: false));
     await settle(tester);
     expect(find.text('Bienvenido'), findsOneWidget);
-    expect(find.text('Continuar con Google'), findsOneWidget);
-    expect(find.text('Modo demo: entrarás con datos de ejemplo.'), findsOneWidget);
+    expect(find.text('Ingresar'), findsOneWidget);
+    expect(find.text('Continuar con Google'), findsNothing);
 
-    await tester.tap(find.text('Continuar con Google'));
+    await tester.tap(find.text('Ingresar'));
     await settle(tester);
     expect(find.text('Saldo disponible'), findsOneWidget);
 
@@ -31,7 +31,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Cerrar sesión'));
     await settle(tester);
-    expect(find.text('Continuar con Google'), findsOneWidget);
+    expect(find.text('Ingresar'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
   });

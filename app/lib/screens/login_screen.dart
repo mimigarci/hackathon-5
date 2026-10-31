@@ -4,43 +4,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot.dart';
 
-/// Sign-in: Google only, and any Google account gets in (a new account is
-/// created on first sign-in with demo data, see supabase/schema.sql).
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.onGoogle, this.demoMode = false});
+/// Welcome screen: "Ingresar" opens the app on the mock data.
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key, required this.onEnter});
 
-  /// Starts Google sign-in. Throws to show an error under the button.
-  final Future<void> Function() onGoogle;
-
-  /// Supabase isn't configured: the button enters with sample data.
-  final bool demoMode;
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  bool _loading = false;
-  String? _error;
-
-  Future<void> _signIn() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      await widget.onGoogle();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = 'No pudimos abrir Google. Inténtalo de nuevo.');
-      }
-      debugPrint('Google sign-in failed: $e');
-    } finally {
-      // On web the page redirects to Google; on mobile the auth state stream
-      // takes over. Re-enable the button in case the user comes back.
-      if (mounted) setState(() => _loading = false);
-    }
-  }
+  final VoidCallback onEnter;
 
   @override
   Widget build(BuildContext context) {
@@ -112,12 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    _SignInCard(
-                      loading: _loading,
-                      error: _error,
-                      demoMode: widget.demoMode,
-                      onGoogle: _loading ? null : _signIn,
-                    ),
+                    _SignInCard(onEnter: onEnter),
                   ],
                 ),
               ),
@@ -147,17 +110,9 @@ class _Wordmark extends StatelessWidget {
 }
 
 class _SignInCard extends StatelessWidget {
-  const _SignInCard({
-    required this.loading,
-    required this.error,
-    required this.demoMode,
-    required this.onGoogle,
-  });
+  const _SignInCard({required this.onEnter});
 
-  final bool loading;
-  final String? error;
-  final bool demoMode;
-  final VoidCallback? onGoogle;
+  final VoidCallback onEnter;
 
   @override
   Widget build(BuildContext context) {
@@ -178,52 +133,24 @@ class _SignInCard extends StatelessWidget {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
-          Text(
-            demoMode
-                ? 'Modo demo: entrarás con datos de ejemplo.'
-                : 'Entra con tu cuenta de Google para continuar.',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
+          const Text(
+            'Ingresa para ver tu saldo, tus pagos y más.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
           ),
           const SizedBox(height: 22),
           SizedBox(
             height: 58,
-            child: OutlinedButton(
-              onPressed: onGoogle,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: AppColors.surface,
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: AppColors.border, width: 1.5),
+            child: FilledButton(
+              onPressed: onEnter,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 shape: const StadiumBorder(),
-                textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
-              child: loading
-                  ? const SizedBox.square(
-                      dimension: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _GoogleLogo(size: 22),
-                        SizedBox(width: 12),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text('Continuar con Google'),
-                          ),
-                        ),
-                      ],
-                    ),
+              child: const Text('Ingresar'),
             ),
           ),
-          if (error != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFFD93025), fontSize: 13.5),
-            ),
-          ],
           const SizedBox(height: 16),
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -292,42 +219,4 @@ class _Glow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The four-color Google "G", drawn so no image asset is needed.
-class _GoogleLogo extends StatelessWidget {
-  const _GoogleLogo({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: const _GooglePainter());
-}
-
-class _GooglePainter extends CustomPainter {
-  const _GooglePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final stroke = s * 0.2;
-    final rect = Rect.fromCircle(center: Offset(s / 2, s / 2), radius: (s - stroke) / 2);
-    Paint arc(Color c) => Paint()
-      ..color = c
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke;
-    const deg = math.pi / 180;
-    canvas.drawArc(rect, -40 * deg, -100 * deg, false, arc(const Color(0xFFEA4335)));
-    canvas.drawArc(rect, -140 * deg, -90 * deg, false, arc(const Color(0xFFFBBC05)));
-    canvas.drawArc(rect, 130 * deg, -90 * deg, false, arc(const Color(0xFF34A853)));
-    canvas.drawArc(rect, 40 * deg, -40 * deg, false, arc(const Color(0xFF4285F4)));
-    canvas.drawRect(
-      Rect.fromLTWH(s / 2, s / 2 - stroke / 2, s / 2 - stroke / 4, stroke),
-      Paint()..color = const Color(0xFF4285F4),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GooglePainter old) => false;
 }

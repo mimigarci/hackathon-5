@@ -9,15 +9,11 @@ class PagoDirectoApp extends StatelessWidget {
   const PagoDirectoApp({
     super.key,
     this.repository,
-    this.supabaseReady = false,
     this.useGoogleFonts = true,
   });
 
   /// Skips the login and opens the app on this data (tests, previews).
   final AppRepository? repository;
-
-  /// Supabase initialized, so the login uses Google.
-  final bool supabaseReady;
   final bool useGoogleFonts;
 
   @override
@@ -28,7 +24,7 @@ class PagoDirectoApp extends StatelessWidget {
       theme: buildAppTheme(useGoogleFonts: useGoogleFonts),
       home: repository != null
           ? SignedInScope(repository: repository!, child: const MainShell())
-          : AuthGate(supabaseReady: supabaseReady),
+          : const AuthGate(),
     );
   }
 }
