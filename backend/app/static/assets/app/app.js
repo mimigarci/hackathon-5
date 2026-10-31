@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=11";
+import { installFeatures } from "./features.js?v=13";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -69,6 +69,7 @@ const PHRASES = {
   pay: ["Verificando tu huella", "Firmando la operación", "Moviendo los bolívares", "Asentando el pago"],
   voice: ["Despertando a Wisi", "Calentando la voz", "Afinando el micrófono", "Conectando"],
   credit: ["Revisando tu historial", "Consultando aliados", "Cuadrando cuotas", "Midiendo tu línea", "Buscando ofertas para ti"],
+  mic: ["Esperando permiso del micrófono"],
 };
 function makeThink(kind, { dark = false, cancellable = false } = {}) {
   const el = document.createElement("span");
@@ -1642,7 +1643,17 @@ async function startVoice(reconnecting = false) {
   let preflight = null;
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error(location.protocol === "https:" || location.hostname === "localhost" ? "Tu navegador no permite el micrófono" : "El micrófono requiere HTTPS");
-    preflight = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const ask = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    // Si el navegador va a mostrar su aviso, explicamos por qué antes de conectar.
+    let asked = false;
+    if (!reconnecting) navigator.permissions?.query({ name: "microphone" }).then((p) => {
+      if (p.state !== "prompt" || preflight) return;
+      asked = true;
+      thinkRow?.set("mic");
+      toast("Wisi necesita tu micrófono: acepta el permiso del navegador", 6000);
+    }).catch(() => {});
+    preflight = await ask;
+    if (asked) { toast("Micrófono listo"); thinkRow?.set("voice"); }
     await openConv("voice");
     hideThinking();
     completeTask("wisi");
