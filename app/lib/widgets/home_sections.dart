@@ -251,9 +251,12 @@ class ServiceLogo extends StatelessWidget {
 // Funciones
 // ---------------------------------------------------------------------------
 
-class AppFunction {
-  const AppFunction(this.label, this.icon, this.color);
+enum FunctionId { parking, services, meters, insurance, tickets, donations }
 
+class AppFunction {
+  const AppFunction(this.id, this.label, this.icon, this.color);
+
+  final FunctionId id;
   final String label;
   final IconData icon;
   final Color color;
@@ -261,19 +264,41 @@ class AppFunction {
 
 const appFunctions = [
   AppFunction(
+    FunctionId.parking,
     'Estacionamiento',
     Icons.directions_car_outlined,
     AppColors.parking,
   ),
-  AppFunction('Servicios', Icons.receipt_long_outlined, AppColors.services),
-  AppFunction('Parquímetros', Icons.local_parking_rounded, AppColors.meters),
-  AppFunction('Seguros', Icons.health_and_safety_outlined, AppColors.insurance),
   AppFunction(
+    FunctionId.services,
+    'Servicios',
+    Icons.receipt_long_outlined,
+    AppColors.services,
+  ),
+  AppFunction(
+    FunctionId.meters,
+    'Parquímetros',
+    Icons.local_parking_rounded,
+    AppColors.meters,
+  ),
+  AppFunction(
+    FunctionId.insurance,
+    'Seguros',
+    Icons.health_and_safety_outlined,
+    AppColors.insurance,
+  ),
+  AppFunction(
+    FunctionId.tickets,
     'Boletería',
     Icons.confirmation_number_outlined,
     AppColors.tickets,
   ),
-  AppFunction('Donaciones', Icons.favorite_border_rounded, AppColors.donations),
+  AppFunction(
+    FunctionId.donations,
+    'Donaciones',
+    Icons.favorite_border_rounded,
+    AppColors.donations,
+  ),
 ];
 
 class FunctionsGrid extends StatelessWidget {

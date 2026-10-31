@@ -1,0 +1,19 @@
+{
+  "reference_app": {
+    "package": "com.paytech.pagodirecto",
+    "version": "5.3.2",
+    "version_code": 231
+  },
+  "method": "Recorrido de UI en AVD separado; capturas mediante REA capture-adb-screen y notas manuales. Login realizado por usuario.",
+  "rea_repository": "https://github.com/morluto/rea",
+  "rea_checkout_commit": "63c65a22430a4bbc0c1807a0298edb867775001f",
+  "rea_checkout_version": "6.5.0",
+  "rea_cli_used": "6.8.0",
+  "base_apk_sha256": "b19815101401080f7c148ee8c0d26767fee49c3e7bf6e5fbe2e1155b619c0be7",
+  "repo_review": {
+    "repository": "mimigarci/hackathon-5",
+    "commit": "5b9e2db29dfcfc6092c1e85db8fb0efc4477a909",
+    "method": "Lectura estática de rutas Flutter, modelos, repositorios de datos y esquema SQL; no ejecución de la app de este repo."
+  },
+  "limit": "Referencia UI y especificación parcial; no acceso a código fuente original de Pago Directo ni validación de APIs privadas. No se publican APKs, sesión, AVD ni datos personales."
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "git clone https://github.com/flutter/flutter.git -b 3.47.8 --depth 1 \"$HOME/flutter\" && \"$HOME/flutter/bin/flutter\" config --no-analytics && \"$HOME/flutter/bin/flutter\" pub get",
+  "buildCommand": "\"$HOME/flutter/bin/flutter\" build web --release --no-web-resources-cdn --dart-define=SUPABASE_URL=\"$SUPABASE_URL\" --dart-define=SUPABASE_PUBLISHABLE_KEY=\"$SUPABASE_PUBLISHABLE_KEY\"",
+  "outputDirectory": "build/web",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

@@ -31,8 +31,44 @@
 
   <title>pago_directo</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Splash shown while main.dart.js and CanvasKit download; removed on the
+       first Flutter frame so the page is never a blank white screen. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #F3F4F9; }
+    #splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #7A7A85; font-size: 14px; transition: opacity .25s;
+    }
+    #splash .logo {
+      width: 72px; height: 72px; border-radius: 20px; background: #FF1764;
+      color: #fff; font-weight: 800; font-size: 30px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #splash .spinner {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 3px solid #E3E4EB; border-top-color: #FF1764;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="splash">
+    <div class="logo">pd</div>
+    <div class="spinner"></div>
+    <div>Cargando PagoDirecto…</div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('splash');
+      if (!s) return;
+      s.style.opacity = '0';
+      setTimeout(function () { s.remove(); }, 300);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

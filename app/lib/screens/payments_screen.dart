@@ -7,6 +7,7 @@ import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/list_tiles.dart';
 import '../widgets/segmented_tabs.dart';
+import 'services/schedule_screen.dart';
 
 class _TabCopy {
   const _TabCopy(this.totalLabel, this.emptyLabel, this.cta);
@@ -89,8 +90,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   SizedBox(
                     height: 62,
                     child: OutlinedButton(
-                      onPressed: () =>
-                          openPlaceholder(context, copy.cta!.substring(2)),
+                      onPressed: () => _status == PaymentStatus.scheduled
+                          ? showScheduleSheet(context)
+                          : openPlaceholder(context, copy.cta!.substring(2)),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: AppColors.surface,
                         foregroundColor: AppColors.textPrimary,

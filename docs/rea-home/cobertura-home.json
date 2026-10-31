@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-31",
+  "repository": "mimigarci/hackathon-5",
+  "reviewed_commit": "5b9e2db29dfcfc6092c1e85db8fb0efc4477a909",
+  "scope": "Seis tarjetas de Funciones en Home; otros accesos de Home se resumen únicamente en README.",
+  "code_evidence": [
+    "app/lib/screens/home_screen.dart",
+    "app/lib/widgets/home_sections.dart",
+    "app/lib/screens/placeholder_screen.dart",
+    "app/lib/data/models.dart",
+    "app/lib/data/repository.dart",
+    "app/lib/data/supabase_repository.dart",
+    "app/lib/data/assistant_service.dart",
+    "supabase/schema.sql"
+  ],
+  "summary": {
+    "home_functions": 6,
+    "rea_partial_analysis": 4,
+    "rea_only_visible_entry": 2,
+    "partial_documentary_specs": 4,
+    "implemented_operational_flows": 0,
+    "placeholder_routes": 6
+  },
+  "features": [
+    {
+      "id": "estacionamiento",
+      "label": "Estacionamiento",
+      "task_ids": [
+        "F32",
+        "F33",
+        "F34",
+        "F35"
+      ],
+      "rea_analysis": "parcial",
+      "agent_spec": "parcial_documental",
+      "app_route": "placeholder",
+      "domain_model": "ausente",
+      "observed_inputs": [
+        "Título de propiedad: foto/archivo en primer paso de afiliación de vehículo.",
+        "Ticket: QR o código numérico manual como alternativas.",
+        "Nombre del lugar para búsqueda."
+      ],
+      "unknowns": [
+        "Reglas de archivo y pasos posteriores del vehículo.",
+        "Consulta del ticket, tarifa vigente, confirmación, pago y comprobante.",
+        "BLE, proximidad y apertura real de barrera."
+      ],
+      "next_step": "Validar contrato de ticket y cotización; implementar primero consulta y fallback manual, y después pago con confirmación real."
+    },
+    {
+      "id": "servicios",
+      "label": "Servicios",
+      "task_ids": [
+        "F13",
+        "F14",
+        "F15",
+        "F16",
+        "F17",
+        "F18",
+        "F19",
+        "F20",
+        "F21",
+        "F22",
+        "F23",
+        "F24",
+        "F25",
+        "F26",
+        "F27",
+        "F28",
+        "F29",
+        "F30",
+        "F31"
+      ],
+      "rea_analysis": "parcial",
+      "agent_spec": "parcial_documental",
+      "app_route": "placeholder",
+      "domain_model": "generico_parcial",
+      "observed_inputs": [
+        "Modalidad prepago/postpago, proveedor e identificador según variante.",
+        "Prefijo/teléfono, contrato o tipo/documento, según formulario; no son intercambiables.",
+        "Montos de catálogo en prepago.",
+        "DLM: condominio e inmueble dependiente.",
+        "JOMI Plomería: nombre, teléfono, dirección; descripción opcional.",
+        "Programar: formulario inicial por servicio e identificador, nombre de contacto."
+      ],
+      "unknowns": [
+        "Respuesta real de deuda, contratos múltiples, cotización y estado del pago.",
+        "Reglas de servidor y formato de cada identificador.",
+        "Pasos de programación después del contacto y mandato recurrente.",
+        "Requisitos fiscales al ejecutar el pago."
+      ],
+      "next_step": "Implementar una variante prepago y una postpago con esquema por proveedor y modalidad; consulta de deuda antes de pedir monto cuando corresponda."
+    },
+    {
+      "id": "parquimetros",
+      "label": "Parquímetros",
+      "task_ids": [
+        "F32",
+        "F36",
+        "F37"
+      ],
+      "rea_analysis": "parcial",
+      "agent_spec": "parcial_documental",
+      "app_route": "placeholder",
+      "domain_model": "ausente",
+      "observed_inputs": [
+        "Decisión del permiso Android de ubicación.",
+        "Selección de parquímetro por mapa o QR, indicada por tutorial."
+      ],
+      "unknowns": [
+        "Disponibilidad, identificador canónico, tarifa, duración y reglas posteriores.",
+        "Inicio, extensión, finalización, penalizaciones y pago de sesión.",
+        "Ubicación efectiva; se denegó permiso en el recorrido."
+      ],
+      "next_step": "Validar selección y estados con proveedor; diseñar recuperación cuando se deniega ubicación antes de iniciar una sesión."
+    },
+    {
+      "id": "seguros",
+      "label": "Seguros",
+      "task_ids": [
+        "F38"
+      ],
+      "rea_analysis": "parcial",
+      "agent_spec": "parcial_documental",
+      "app_route": "placeholder",
+      "domain_model": "ausente",
+      "observed_inputs": [
+        "Tipo Vehículos/Personas.",
+        "Póliza/proveedor, subtipo de vehículo y cobertura.",
+        "Solo se recorrió Vehículos → Particular → lista de coberturas."
+      ],
+      "unknowns": [
+        "Formulario posterior a elegir cobertura o Adquirir.",
+        "Identidad/documentación exigida, elegibilidad, cotización final y emisión.",
+        "Ramas Personas, Pick-up, Rústico y Motos."
+      ],
+      "next_step": "Confirmar esquema del proveedor y requisitos de contratación; separar consulta de coberturas de la adquisición."
+    },
+    {
+      "id": "boleteria",
+      "label": "Boletería",
+      "task_ids": [],
+      "rea_analysis": "solo_acceso_visible",
+      "agent_spec": "pendiente",
+      "app_route": "placeholder",
+      "domain_model": "ausente",
+      "observed_inputs": [],
+      "unknowns": [
+        "Destino del acceso, catálogo, pasos, inputs, validaciones y estados.",
+        "Reserva/compra, disponibilidad y comprobante: no observados."
+      ],
+      "next_step": "Recorrer el acceso en la app de referencia y registrar sus pantallas antes de especificar campos."
+    },
+    {
+      "id": "donaciones",
+      "label": "Donaciones",
+      "task_ids": [],
+      "rea_analysis": "solo_acceso_visible",
+      "agent_spec": "pendiente",
+      "app_route": "placeholder",
+      "domain_model": "ausente",
+      "observed_inputs": [],
+      "unknowns": [
+        "Destino del acceso, catálogo, pasos, inputs, validaciones y estados.",
+        "Beneficiario, importe y recurrencia: no observados; no se afirman como campos reales."
+      ],
+      "next_step": "Recorrer el acceso en la app de referencia y confirmar el esquema real antes de modelar una donación."
+    }
+  ],
+  "definition_of_done_proposed": [
+    "Recorrido e inputs respaldados por evidencia o contrato documentado.",
+    "Modelo por variante, dependencias, validaciones y estados definidos.",
+    "Ruta Flutter funcional conectada a herramientas autorizadas.",
+    "Confirmación y resultado real para operaciones con efectos.",
+    "Prueba de integración que verifique éxito y errores relevantes sin mover fondos reales."
+  ]
+}

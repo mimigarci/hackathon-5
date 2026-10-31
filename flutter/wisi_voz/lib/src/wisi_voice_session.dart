@@ -3,8 +3,6 @@ import 'dart:convert';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-import 'wisi_models.dart';
-
 /// Sesión de voz con ElevenLabs Conversational AI.
 ///
 /// Gestiona el **canal de control** por WebSocket (transcripciones, respuestas
