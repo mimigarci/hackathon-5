@@ -1,0 +1,605 @@
+{
+  "privacy": "La mayoría de capturas originales no se distribuye por minimización de datos. Solo se publican seis formularios/catálogos sin valores personales de sesión, revisados visualmente.",
+  "screens": [
+    {
+      "screen_id": "P007_sesion_lista",
+      "evidence_id": "ev_3c8e5c9c3915980ed4451e026a747461b20366e1c56ad81dd606045020cc9e90",
+      "captured_at": "2026-10-31T14:47:42.314228+00:00",
+      "sha256": "cd2b09da9eef122bb4e2a162126e6ce9c2bf88cd7bfd755ad4706989d31bb9ed",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P040_home_funciones",
+      "evidence_id": "ev_1dee9fc3e778f29a10aed2a09ee140b77daf775a37459336c72b2f3dcfc640dd",
+      "captured_at": "2026-10-31T14:58:30.221014+00:00",
+      "sha256": "c72ea787960218dde418f07a48a4a4e3e02d69c6509b766a1a4864c2bf87aabb",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P041_servicios",
+      "evidence_id": "ev_9672b0107bd9871c076a3b3d9731591960075140cc379e3dfdd7ce9178b6ecf6",
+      "captured_at": "2026-10-31T14:58:49.818832+00:00",
+      "sha256": "d025449e77eb43919e00b2e9dc1e8920bbcbabcc729aad9f71a76d00233e2753",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P042_servicios_facturacion",
+      "evidence_id": "ev_2c53b4245332ce924d865ae5a2682c47d735a9ff108d6e88917168a81cef2691",
+      "captured_at": "2026-10-31T14:59:05.157406+00:00",
+      "sha256": "4f921c8dda7c626bc7ab360a3864274f260f7699cf5c3c762d5ec76f750277d0",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P046_salir_facturacion",
+      "evidence_id": "ev_e528929dfa690836a7e33b65083b3720d1c1e2ce62680c55ffcdfc9b462daa4d",
+      "captured_at": "2026-10-31T15:03:35.875378+00:00",
+      "sha256": "ff28cf70acc249838905a7973ffe005421ac180e67e6bc8dc55b5a49bbbab4d1",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P047_digitel",
+      "evidence_id": "ev_edd9f0be1b2ed798732f6869a7c4e17c57a9e722690669721744e3701565b10d",
+      "captured_at": "2026-10-31T15:03:51.381753+00:00",
+      "sha256": "d334e5c311286ff09426fa874ef7c728851e02aa4cc6d7ba5435e227f8ad6b47",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P047_digitel.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P048_digitel_montos",
+      "evidence_id": "ev_5aa1e3e885c24c3e203840c6feeddba80f1a1f41aa172606c25ff3dc63a41505",
+      "captured_at": "2026-10-31T15:04:04.263875+00:00",
+      "sha256": "9d5e660a84cc2c46c0bee31540e155598bef467d82475d36e365a1e144c7ef5a",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P050_digitel_postpago",
+      "evidence_id": "ev_84c8e0ae1a96e561f29af4f10cb354c5cc72687533994fa14c6973be9d466e4a",
+      "captured_at": "2026-10-31T15:04:23.599176+00:00",
+      "sha256": "7692e1eda064c6a7fb3e90767626b1395d7f15ae8b4e4138f59cf7667d5a8d57",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P051_digitel_validacion_telefono",
+      "evidence_id": "ev_a24f8e752dc5a580e6e54a3f461ac3c89deccbafbfc10e8acc3740e0aff2d2a5",
+      "captured_at": "2026-10-31T15:04:33.767029+00:00",
+      "sha256": "dd5ef6c3d6bc3f4f6456baab9d11d41aeadf48465be7cd5858ac133ce92e4b38",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P053_movilnet",
+      "evidence_id": "ev_d623b7ee1d3b58e50f3817196e8612a0e8e5b1ca21be21d36e910c457ba8f43f",
+      "captured_at": "2026-10-31T15:04:56.557585+00:00",
+      "sha256": "d919df102cd0e93357d487ae81035c649475034a2abc92ff87e1dbad6694daa2",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P054_movilnet_postpago",
+      "evidence_id": "ev_f5d17f4aaba7b3a451cac85d9e3ca721ff09af132ed54c6951f9f61c8fa49cd7",
+      "captured_at": "2026-10-31T15:05:13.498928+00:00",
+      "sha256": "42f1901901e5886ceadf8c896c76dfa0549c90a831f5174ad02e7433e4d558d4",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P056_movistar",
+      "evidence_id": "ev_f0f40c34cc682e735ddfba1e65af696764deb09678ec19f880731c135cf56d21",
+      "captured_at": "2026-10-31T15:05:26.391502+00:00",
+      "sha256": "7fd10aa63910c1a3c52f387bcea952a78fee40dcced6baf8c43801c297782dfa",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P057_movistar_postpago",
+      "evidence_id": "ev_811aa3c1d9a735227da6cf578fff46c9e476e6b24296f3cfa23d98d69ac0c4d7",
+      "captured_at": "2026-10-31T15:05:37.474840+00:00",
+      "sha256": "8165677fbbd157171e884e701db1e348a36a49d5bb51747bd1cef47ecfba4d7d",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P058_movistar_tipo_servicio",
+      "evidence_id": "ev_11e91c83bc8cd0f9e56edf0768a117ce0649df224d3ab67a3caf62decc22be06",
+      "captured_at": "2026-10-31T15:05:45.942055+00:00",
+      "sha256": "3f26b5500a098119324b534873f2379caa4a11a5d424d514366f3e4667251f45",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P058_movistar_tipo_servicio.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P061_simpletv",
+      "evidence_id": "ev_8b13dfe8c40602ed0bd0d88e9def20c40046bdad730845c35cfae3941d6db9a4",
+      "captured_at": "2026-10-31T15:06:35.012580+00:00",
+      "sha256": "3a6fa1c16f219278f1f1dac83af8a4a1c5827cdfbc70207178baf813b5b0126e",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P063_inter",
+      "evidence_id": "ev_08d0082de23f787b05c66a6c611c3fb65c00239d1d4a03b28bea58ea7702334f",
+      "captured_at": "2026-10-31T15:06:54.073827+00:00",
+      "sha256": "8e2ebda5bfb8f072033e4f4d4e8a5cecff05ce806fece153846d5c56dc94a3bb",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P065_cantv",
+      "evidence_id": "ev_65593519295f1b5ec1543c68357cd38c57a487631a83b1e6d2e8eccfa1f7675d",
+      "captured_at": "2026-10-31T15:07:13.215480+00:00",
+      "sha256": "c1973a435a81e5fdb392e69a036e801ace4736bad0616c05889095e258ef50d9",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P067_catalogo_mas_servicios",
+      "evidence_id": "ev_81b478d9de70dd90a52527580b8bf1a6e2b5bd6f1ed6b656d9bec6bb2ffb73a3",
+      "captured_at": "2026-10-31T15:07:31.011972+00:00",
+      "sha256": "e0d7365eb453f4d900ef2461ed30b50427f80d654a686ca442a9a8e5005899d1",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P068_corpoelec",
+      "evidence_id": "ev_dd14cb34185f6cfc6c808bc73602db9f7611cd6ab53f5200de26bcf169e6cc3d",
+      "captured_at": "2026-10-31T15:07:47.595247+00:00",
+      "sha256": "d5f555fd40c757253b063a924d37bfdb62f54eb0daae74e6c1efbf270b3f2d98",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P069_catalogo_posicion",
+      "evidence_id": "ev_81db0cb37c6fb9a41a4b316634d6adaf0ff17870dd285ec7458aab23a6fbb733",
+      "captured_at": "2026-10-31T15:08:07.221405+00:00",
+      "sha256": "3887185e332e3b4eb51642396bc9f6d562e993a8292398d618026a5bfd833814",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P070_thundernet",
+      "evidence_id": "ev_6f60322242c927264dde494e65bb01ab00595e1e3f647ba5aaed8a068db7787e",
+      "captured_at": "2026-10-31T15:08:23.548200+00:00",
+      "sha256": "7f307859e034d9b7b2fb127720daf9126f096945bead19b6fa088291c5aa6f13",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P073_tugruero_cargado",
+      "evidence_id": "ev_df67ca5dcdc3d70fa1d1d570e98b535baf3eb93519577ed1ac47de4481f7dced",
+      "captured_at": "2026-10-31T15:09:19.167766+00:00",
+      "sha256": "eaeb0724f05275396f0e1ab3922598e120898bdd102f05c1b6be59b6c930c1fa",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P074_tugruero_planes",
+      "evidence_id": "ev_123c68064f288956c62828b08ca39e6e1ad54c10500d43bb24d8013b3340b53d",
+      "captured_at": "2026-10-31T15:10:39.101771+00:00",
+      "sha256": "40a091cc7081db7a45213ce3d2409be8b53800dc4708ce4839ddca7c68e58f0f",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P075_tugruero_planes_cargados",
+      "evidence_id": "ev_0be63b0e25b3fb03b4360df5ae53b58470acdb4cc7125a8a2055e76ea992e9e2",
+      "captured_at": "2026-10-31T15:13:11.181250+00:00",
+      "sha256": "458a3a6e024a800203c762c28e8da0edd6266d8180a14227fef718f2808f685a",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P078_dlm",
+      "evidence_id": "ev_014dc5ed4cd40c9c05c00a64c9b519491ff52d63ceb0fdd319015005d4f176f6",
+      "captured_at": "2026-10-31T15:13:33.737796+00:00",
+      "sha256": "d6d44835e92ca3f9d68167bd3d938aaa8631ebc3b3c5ec21096057972bc06ad3",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P079_dlm_cargado",
+      "evidence_id": "ev_c0f029f423e5b2369b3e81580f2427e5c5916b38fc4efd7bd8e61b9f871e5089",
+      "captured_at": "2026-10-31T15:13:54.101034+00:00",
+      "sha256": "dc9a1d174a60b0333c8678e7e1c48a229651e15ee97a4b72881df560055d89fa",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P081_globalgps",
+      "evidence_id": "ev_5b7dc937edf98e7081961505befb5026977ca507b35af3c41b2254d4ff96d2c1",
+      "captured_at": "2026-10-31T15:14:11.717183+00:00",
+      "sha256": "01cff4df0c9c46d3561934f1dd8172116a7759bcb6b2fa292671844291938a56",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P083_starmovies",
+      "evidence_id": "ev_060f76f160e224bae3e302564d961f9517b6ce6b9dd9b035527069332bd9812a",
+      "captured_at": "2026-10-31T15:14:29.435095+00:00",
+      "sha256": "19dda0c28ed49f8951620d2d540e499407881c08e98fe148f147ab07741a154b",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P085_catalogo_inferior",
+      "evidence_id": "ev_04e2b779b9d2effe7b8d6e66062e1b5b871a773555f93fe487b37004738bcdfe",
+      "captured_at": "2026-10-31T15:14:45.095526+00:00",
+      "sha256": "e3797640c6bb42c292823ef6cc6f51cdacff48782d26965b9ea41ca446b18653",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P086_fibex",
+      "evidence_id": "ev_ebd7a6c2a6c896e63668137c610c56e7399b31802f90556e0cd12f66eedbf045",
+      "captured_at": "2026-10-31T15:14:56.244944+00:00",
+      "sha256": "8ee6af60661092b58a2ac1a5f53a3c3b3e5ad70c5df52a84e39100401e3bb377",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P088_jomi",
+      "evidence_id": "ev_05acde5e704b560d7d58a35b67004a57b12dc596ac4e60f371ce6a6bad7d86f8",
+      "captured_at": "2026-10-31T15:22:16.248781+00:00",
+      "sha256": "80edc715b81ea8539ee6429c6a6b66a41b3ceabf6c44242e5a2cc983375b30e3",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P089_jomi_plomeria",
+      "evidence_id": "ev_a12863adcbaf33cea2e73771c425d8aed20418e18ba9c15b11af96913aa8bee1",
+      "captured_at": "2026-10-31T15:22:39.272605+00:00",
+      "sha256": "b1d206bf0d184835ff83cf85e32586ce99a6cb6db099cf8beb842172a28ca83c",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P090_jomi_formulario",
+      "evidence_id": "ev_9eeefef99b494aa6bfdbfc378ff1cec358fdb0ebb503845fe62b15c7992e4fb5",
+      "captured_at": "2026-10-31T15:22:56.766659+00:00",
+      "sha256": "63d32cae20ea390a18e1f3e1d44334dfc1848b90b08f71e43cace5881509c118",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P091_jomi_direccion",
+      "evidence_id": "ev_f36feab833669477d8b6333b5c64b11092bd30ef0f1e6ad70e0c202283c636be",
+      "captured_at": "2026-10-31T15:23:12.994604+00:00",
+      "sha256": "42917105cd51fd0f23bfdf80f4b3fecb9a5ca014e910e53ac794c20440b8f41f",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P094_programar_servicios",
+      "evidence_id": "ev_7d88d2726bc343a2b540984768f3176c49940cd43d0dbab4b182353cce86538d",
+      "captured_at": "2026-10-31T15:23:39.351733+00:00",
+      "sha256": "2ee5cdf6a2d6e36f40c02d6f994df69b6670636b2d43c05ec10cb643bc12c302",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P095_programar_nuevo",
+      "evidence_id": "ev_5a9ab045d0aa3d3c2cf74aacd2d9d5d04ea07761ada66b0726caa0456ce7d347",
+      "captured_at": "2026-10-31T15:23:55.905270+00:00",
+      "sha256": "190668d49fb4938aa302b599dc38f7ec585f6b148398046ad29da055a2d93fb5",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P096_programar_usuario",
+      "evidence_id": "ev_f8a2f4adcbfe90df820e349490fe7c1b158f93b9ffa47e0c391fb15db1aa968e",
+      "captured_at": "2026-10-31T15:24:07.961405+00:00",
+      "sha256": "22d9d5ba205ccd5ee7f89eebc7061d21f9954e87dea96afab811a045c51ead7e",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P099_programar_servicio",
+      "evidence_id": "ev_aee39dbec0feba4db4aef9324b6031e08b291332e2c24bfc13280ff7c3f936d2",
+      "captured_at": "2026-10-31T15:25:21.247639+00:00",
+      "sha256": "a5593fdcc2295b337aa0b6ef3d6e929e5bd9228f7296c02dad3ec6df89770fa4",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P100_programar_catalogo",
+      "evidence_id": "ev_978de7bcca0a98cce4fd60d1d445de25c9807be1c2a8d40ab24e22da2e2a01c3",
+      "captured_at": "2026-10-31T15:25:44.188489+00:00",
+      "sha256": "a15afbb1cc7195740950bf6fb978cb00d448c256cf2ca27375e9688b1b4426f2",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P105_vehiculos",
+      "evidence_id": "ev_1415d5356a237dfae4420d451cb61afc9a9cc15b5c50a3b7e5c184a2bade51e7",
+      "captured_at": "2026-10-31T15:26:52.378748+00:00",
+      "sha256": "4213df7bf47740e779d131d480cd6ac2fcd2bcb9330ac501ebf6af6d165ca900",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P106_afiliar_vehiculo",
+      "evidence_id": "ev_13e4e9a8819c1e2e673adfe394f9418e740818588624e951677723b21845a6b3",
+      "captured_at": "2026-10-31T15:27:08.083809+00:00",
+      "sha256": "767d96d6c8f25337924bbb7e833119d6287c2d10cd9e15ca5fa9cd4ccc8f9ec6",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P106_afiliar_vehiculo.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P110_estacionamiento",
+      "evidence_id": "ev_799b5e1dd0a3f5b82c1480b8f69be02fd5d32d15dcfdbba8bf0b2f2b3457088c",
+      "captured_at": "2026-10-31T15:27:53.362718+00:00",
+      "sha256": "ad1acf73e4933f8dc46b040d2188033927bd45741c97242e732acaaabee76301",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P111_estacionamiento_entrada",
+      "evidence_id": "ev_bedfee3818b34d2485626199716a50a8fb81cf1e203904832f0816aed65b84c9",
+      "captured_at": "2026-10-31T15:28:11.875355+00:00",
+      "sha256": "a9d6e1797a55259a929a5c4220e6a4f0355046a53c016bb8da6f7a40045a7e08",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P112_ticket_fisico",
+      "evidence_id": "ev_b18137916cd312dae381b796528555923f3274aee7f909e8be9b6168a5b09798",
+      "captured_at": "2026-10-31T15:28:30.666771+00:00",
+      "sha256": "423658c801b24de5a051be7430331f482af7be6e5b9aa18030d4f2f5ad430f9f",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P113_ticket_codigo_manual",
+      "evidence_id": "ev_2d5c80c6762a662576f8250b6e8174c9cba05fcfd642b1f7ca59c5711c37e86c",
+      "captured_at": "2026-10-31T15:28:46.750973+00:00",
+      "sha256": "b833eeeb621db32fa446d69c83900fff808b8107469622866296fdb1d53fac3a",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P114_ticket_manual_formulario",
+      "evidence_id": "ev_ecc2c0621f571ca3b6c0b3f343c03df2b35940060e95b526525e75a4f3e272af",
+      "captured_at": "2026-10-31T15:29:05.456234+00:00",
+      "sha256": "9feb1ad46b6518bba22c801dfcfeee3bd30276aa42f75529f307498a62544577",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P114_ticket_manual_formulario.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P115_salir_ticket",
+      "evidence_id": "ev_ffdcb20a07f59e68202f99409c1b6b71436dfa85235253e37be16c19f31f95a2",
+      "captured_at": "2026-10-31T15:29:27.336086+00:00",
+      "sha256": "58ce7814de7c5c1b99b2bf001391c355d3f86851d23c31d900985ccb5e827619",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P116_ubicaciones",
+      "evidence_id": "ev_9fdbc6ac8ac6cbdc819b8be26d0ece1189e61e0cd9326700753c0b7f1354d742",
+      "captured_at": "2026-10-31T15:29:41.492962+00:00",
+      "sha256": "7a4ced1cd521ae3461eb3a2468bd9879feb260e0862678e36424076ee4620689",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P120_parquimetros",
+      "evidence_id": "ev_2d97380b79cc1fea2e93e67a8732e65770eb69acb4f6f4570103a467c1828524",
+      "captured_at": "2026-10-31T15:30:37.015522+00:00",
+      "sha256": "be9e37c00ade22209a3c764e3606b55be2e5a3106abdc3ad8c0112cefa8ae01e",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P121_parquimetros_sin_ubicacion",
+      "evidence_id": "ev_68107d00df4159a4ebad129ecaeed165e437100dd66066bf5b89141dc9775acb",
+      "captured_at": "2026-10-31T15:30:57.567792+00:00",
+      "sha256": "6d4587fc6859b03e4bb6bef8f3ca24e5f00dd63b38d2028f8012f41b76611f01",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P121_parquimetros_sin_ubicacion.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P124_seguros",
+      "evidence_id": "ev_6fc11f78b87fdc3d5361e0936514bfee3f9ed3f62eb70ff5b7f47c68b096c86a",
+      "captured_at": "2026-10-31T15:31:50.312021+00:00",
+      "sha256": "e96702cb8abbb83710d8883da1fcdd210e3d5b1ef42503c4aa0d8e9f954fa47d",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P125_cerrar_tutorial_parquimetro",
+      "evidence_id": "ev_21cb5c24364a6e343afa9c46b662db770710486234c19fc0d69c21b09358058d",
+      "captured_at": "2026-10-31T15:32:29.553467+00:00",
+      "sha256": "1ff72172be538237a8899ad61cf4f00d108369b5048ecec4664ebb7a96ffdcec",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P128_seguros",
+      "evidence_id": "ev_7dce867c1026359164da3011260ecea35cd7836bb975c51f15e1bcd2511a2cc6",
+      "captured_at": "2026-10-31T15:33:03.569444+00:00",
+      "sha256": "013836dea8acea5423014b9d28dd9488cf406260e6a860aa80630c6eb61c9fe5",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P129_seguros_catalogo",
+      "evidence_id": "ev_426ef432875b894aa27e5e77ccf2af3d76cc4ca275a6596b6a963182278ecf98",
+      "captured_at": "2026-10-31T15:33:20.609292+00:00",
+      "sha256": "1ed9ccbe4b1a90f8347c356076ea7469ca6a1c7e1c362f8e92c4d554b39fdebd",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P130_seguros_tipos",
+      "evidence_id": "ev_924a9e89ad9192465ae8ce9b833b874c859c30ef4baade12a3d59f9f6e400c7f",
+      "captured_at": "2026-10-31T15:33:37.831670+00:00",
+      "sha256": "013836dea8acea5423014b9d28dd9488cf406260e6a860aa80630c6eb61c9fe5",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P131_seguros_tipo_real",
+      "evidence_id": "ev_3221edc64e6d1a8f71c205065162250d3e87bfc675209c06d60da3781e537859",
+      "captured_at": "2026-10-31T15:33:51.361668+00:00",
+      "sha256": "930aa572c7299574526f9cf4ee794e0e955778912da8e4f86b36f7fa956fff88",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P132_seguros_vehiculos",
+      "evidence_id": "ev_32e9e05a43ad95af569c202f9963c3be6fa4f92a35c4b3ea1c1cc41eb30fb81e",
+      "captured_at": "2026-10-31T15:34:06.200070+00:00",
+      "sha256": "7d3133e81a88ec0c5d6a124351a4e735c0362ebc9a07c18d592e8f58c891e7e5",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P133_seguros_coberturas",
+      "evidence_id": "ev_4ceb8b4467d9ff98ce6866a68d3b374b000e7d96371b8a5368b74696eafbbc70",
+      "captured_at": "2026-10-31T15:34:25.088396+00:00",
+      "sha256": "5e590146cb3ae00bc976fe407b78e35e9745f73c396819e8cbc5c501a2357a6d",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P134_seguros_particular",
+      "evidence_id": "ev_79c05f4bf5336b851c3b1efaba90cd5fc8b5f5d0cfa8b16134d450674ef57576",
+      "captured_at": "2026-10-31T15:34:39.565510+00:00",
+      "sha256": "c4c236651cad66f7b3c2993c111c0ed9fbb286d247de7508f0aba04ab6106f4d",
+      "width": 720,
+      "height": 1280,
+      "shared_image": "pantallas/P134_seguros_particular.png",
+      "capture_label_is_semantic_truth": false
+    },
+    {
+      "screen_id": "P145_funciones",
+      "evidence_id": "ev_96a5d2f38d877ee4a860e709e69499ad60cbf4a4e430f30122bb9ac9809f5820",
+      "captured_at": "2026-10-31T15:46:31.774215+00:00",
+      "sha256": "36cadb7d412f2bdc890d6b53077582beea32c0bf836e63f6dafeb791046185d8",
+      "width": 720,
+      "height": 1280,
+      "shared_image": null,
+      "capture_label_is_semantic_truth": false
+    }
+  ]
+}
