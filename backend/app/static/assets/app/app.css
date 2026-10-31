@@ -212,6 +212,16 @@ h1, h2, h3, p { margin: 0; }
 .wallet-acts button span.ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, .24); display: grid; place-items: center; transition: transform var(--t-press) var(--ease-out), background var(--t-fast); }
 .wallet-acts button:active span.ic { transform: scale(.9); background: rgba(255, 255, 255, .34); }
 .wallet-acts img { width: 26px; height: 26px; }
+/* Credirecto (junto al saldo) */
+.credi {
+  border-radius: 24px; padding: 20px 18px 18px; color: #fff; min-height: 196px;
+  background: linear-gradient(135deg, #1c1c1c 0%, #262b12 55%, var(--lime) 100%);
+  display: flex; flex-direction: column;
+}
+.credi-top { display: flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.credi-top svg { width: 30px; height: 30px; color: var(--lime); }
+.credi b { margin-top: auto; font-size: 15px; font-weight: 700; }
+.credi p { font-size: 12px; line-height: 1.35; color: rgba(255, 255, 255, .78); margin-top: 4px; }
 .balance-flash { animation: flash .9s var(--ease-out); }
 @keyframes flash { 0% { transform: scale(1); } 30% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
@@ -242,6 +252,42 @@ h1, h2, h3, p { margin: 0; }
 .svc-tile img { max-height: 30px; width: auto; }
 .svc-tile.add { font-size: 12px; font-weight: 500; line-height: 1.2; text-align: center; color: var(--ink); gap: 2px; }
 .svc-tile.add b { font-size: 26px; font-weight: 400; line-height: 1; }
+
+/* carrusel horizontal (Club PagoDirecto, Sugerencias) */
+.hrow { display: flex; gap: 14px; overflow-x: auto; padding: 2px var(--gutter) 8px; margin: 0 calc(var(--gutter) * -1); scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); }
+.hrow::-webkit-scrollbar { display: none; }
+.hrow > * { flex: none; width: min(320px, calc(100% - 40px)); scroll-snap-align: start; }
+
+/* Club PagoDirecto (mismo componente que la tarjeta de Wisi) */
+.club {
+  display: grid; grid-template-columns: 64px 1fr; gap: 14px;
+  background: var(--surface); border-radius: var(--r-lg);
+  padding: 16px; box-shadow: var(--shadow-card);
+}
+.club .pic { width: 64px; height: 64px; border-radius: 18px; background: var(--bg); color: var(--pd); display: grid; place-items: center; }
+.club .pic svg { width: 32px; height: 32px; }
+.club-b { display: flex; flex-direction: column; min-width: 0; }
+.club-t { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.club-t h3 { font-size: 16px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-t b { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.club p { font-size: 14px; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
+.club .btn { align-self: flex-end; margin-top: 10px; }
+
+/* Sugerencias */
+.sug {
+  display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+  min-height: 236px; padding: 20px; border-radius: 28px; color: #fff;
+  background: linear-gradient(180deg, var(--a), var(--b));
+  box-shadow: var(--shadow-card);
+  transition: transform var(--t-press) var(--ease-out);
+}
+.sug:active { transform: scale(.98); }
+.sug-brand { display: flex; align-items: center; gap: 4px; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.sug-brand svg { width: 24px; height: 24px; color: #ffd233; }
+.sug-h { margin-top: auto; font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -.015em; }
+.sug-h em { font-style: normal; color: #ffd233; }
+.sug-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sug-tags span { background: var(--pd-strong); border-radius: var(--r-pill); padding: 4px 12px; font-size: 12px; font-weight: 500; }
 
 /* Funciones */
 .funcs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 6px; }

@@ -49,6 +49,8 @@
     <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1-4A8 8 0 1 1 20 12z"/></symbol>
     <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9.5h.01M15 9.5h.01"/></symbol>
     <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
   </defs>
 </svg>
@@ -91,7 +93,36 @@
               </div>
             </article>
           </div>
+          <div class="wallet-frame">
+            <article class="credi" aria-label="Credirecto">
+              <div class="credi-top"><svg aria-hidden="true"><use href="#i-link"/></svg>Credirecto</div>
+              <b>Credirecto está en camino</b>
+              <p>Todavía no está disponible para tu cuenta. Te avisamos apenas lo habilitemos.</p>
+            </article>
+          </div>
         </div>
+
+        <section class="sec" aria-labelledby="h-club">
+          <div class="sec-h"><h2 id="h-club">Club PagoDirecto</h2></div>
+          <div class="hrow">
+            <article class="club">
+              <div class="pic"><svg aria-hidden="true"><use href="#i-lock"/></svg></div>
+              <div class="club-b">
+                <div class="club-t"><h3>Llave de acceso</h3><b class="num">+250 pts</b></div>
+                <p>Activa, protege tu cuenta y gana puntos del Club.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-soon="La llave de acceso">Completar</button>
+              </div>
+            </article>
+            <article class="club">
+              <div class="pic"><svg aria-hidden="true"><use href="#i-car"/></svg></div>
+              <div class="club-b">
+                <div class="club-t"><h3>Registra tu vehículo</h3><b class="num">+150 pts</b></div>
+                <p>Agrega tu placa y paga estacionamientos más rápido.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-push="parking">Completar</button>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <section class="sec" aria-labelledby="h-wisi">
           <div class="sec-h"><h2 id="h-wisi">Pídeselo a Wisi</h2></div>
@@ -124,6 +155,22 @@
             <button type="button" class="fn" data-soon="Seguros"><img src="/assets/pd/insurance-v2.svg" alt="" /><span>Seguros</span></button>
             <button type="button" class="fn" data-soon="Boletería"><img src="/assets/pd/booking-v2.svg" alt="" /><span>Boletería</span></button>
             <button type="button" class="fn" data-push="donate"><img src="/assets/pd/donations-v2.svg" alt="" /><span>Donaciones</span></button>
+          </div>
+        </section>
+
+        <section class="sec" aria-labelledby="h-sug">
+          <div class="sec-h"><h2 id="h-sug">Sugerencias</h2></div>
+          <div class="hrow">
+            <button type="button" class="sug" style="--a:#6b5a4e;--b:#2a221d" data-soon="Jomi">
+              <span class="sug-brand">Jomi<svg aria-hidden="true"><use href="#i-smile"/></svg></span>
+              <span class="sug-h">Pídelo acá.<br />Con Jomi <em>resuelves.</em></span>
+              <span class="sug-tags"><span>Línea blanca</span><span>Mecánica</span><span>Electricidad</span><span>Construcción</span><span>Plomería</span></span>
+            </button>
+            <button type="button" class="sug" style="--a:#f2994a;--b:#7a3410" data-soon="Seguros">
+              <span class="sug-brand">Seguros<svg aria-hidden="true"><use href="#i-smile"/></svg></span>
+              <span class="sug-h">Tu moto,<br /><em>protegida.</em></span>
+              <span class="sug-tags"><span>RCV</span><span>Cobertura amplia</span><span>Asistencia vial</span></span>
+            </button>
           </div>
         </section>
       </div>
