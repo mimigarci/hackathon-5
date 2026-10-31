@@ -280,6 +280,8 @@ def api_tool(
             )
         case "get_operation_status":
             return tools.get_operation_status(principal, b.get("operation_ref", ""))
+        case "list_movements":
+            return tools.list_movements(principal, int(b.get("limit", 20)))
         case "create_support_case":
             return tools.create_support_case(
                 principal, b.get("category", ""), b.get("summary", ""),

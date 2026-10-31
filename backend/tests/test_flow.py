@@ -168,3 +168,27 @@ def test_cross_user_intent_denied(client):
     ).json()
     assert conf["status"] == "denied"
     assert conf["error"]["code"] == "forbidden"
+
+
+def test_movements_after_confirm(client):
+    h = _auth(client)
+    empty = client.post("/api/tool/list_movements", headers=h, json={}).json()
+    assert empty["status"] == "ok" and empty["data"]["movements"] == []
+
+    prep = client.post(
+        "/api/tool/prepare_parking", headers=h, json={"ticket_ref": "TCK-48213"}
+    ).json()
+    intent_id = prep["data"]["intent_id"]
+    proof = client.post(
+        "/api/approval-proof", headers=h, params={"intent_id": intent_id}
+    ).json()["approval_proof"]
+    conf = client.post(
+        "/api/confirm", headers=h, json={"intent_id": intent_id, "approval_proof": proof}
+    ).json()
+    assert conf["status"] == "ok" and "ticket pagado" in conf["speech"]
+
+    movs = client.post("/api/tool/list_movements", headers=h, json={}).json()["data"]["movements"]
+    assert len(movs) == 1
+    assert movs[0]["kind"] == "parking"
+    assert movs[0]["title"] == "Estacionamiento · TCK-48213"
+    assert movs[0]["amount_minor"] == -prep["data"]["summary"]["amount_minor"]

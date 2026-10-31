@@ -46,6 +46,7 @@ class Operation:
     fee_minor: int
     state: str  # settled | pending | failed
     created_at: float
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -148,11 +149,17 @@ class Ledger:
                 fee_minor=intent.fee_minor,
                 state="settled",
                 created_at=time.time(),
+                details=dict(intent.details),
             )
             acc.operations.append(op)
             intent.state = "submitted"
             self._idempotency[approval_proof] = op.operation_ref
             return "executed", op
+
+    def operations(self, principal: str) -> list[Operation]:
+        """Operaciones del principal, la más reciente primero."""
+        with self._lock:
+            return list(reversed(self.account(principal).operations))
 
     def get_operation(self, operation_ref: str) -> Operation | None:
         return self._find_op(operation_ref)

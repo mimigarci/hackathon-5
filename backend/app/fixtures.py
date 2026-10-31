@@ -59,4 +59,4 @@ FOUNDATIONS = [
 ]
 
 # Wallet inicial del usuario demo (en céntimos de Bs).
-INITIAL_WALLET_BALANCE_MINOR = 2_500_00
+INITIAL_WALLET_BALANCE_MINOR = 5_000_00

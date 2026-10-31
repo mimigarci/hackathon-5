@@ -15,4 +15,4 @@ export const FOUNDATIONS = [
   { foundation_ref: "banco_alimentos", name: "Banco de Alimentos de Caracas" },
 ];
 
-export const INITIAL_WALLET_BALANCE_MINOR = 2_500_00;
+export const INITIAL_WALLET_BALANCE_MINOR = 5_000_00;

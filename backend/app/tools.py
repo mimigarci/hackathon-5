@@ -88,6 +88,18 @@ def list_foundations(principal: str) -> ToolResponse:
 # ---- preparación de intenciones (NO ejecutan dinero) -------------------------
 
 
+def _bad_amount(amount_minor: int | None) -> ToolResponse | None:
+    """Rechaza montos no positivos antes de crear la intención."""
+    if amount_minor is not None and amount_minor <= 0:
+        return ToolResponse(
+            request_id=_rid(),
+            status=Status.denied,
+            error={"code": "invalid_amount", "message": "El monto debe ser mayor que cero."},
+            speech="El monto tiene que ser mayor que cero. ¿Cuánto quieres usar?",
+        )
+    return None
+
+
 def prepare_payment(
     principal: str, service_ref: str, account_number: str, amount_minor: int | None
 ) -> ToolResponse:
@@ -99,6 +111,8 @@ def prepare_payment(
             error={"code": "service_not_found", "message": "Servicio no disponible."},
             speech="Ese servicio no está en el catálogo, no puedo prepararlo.",
         )
+    if bad := _bad_amount(amount_minor):
+        return bad
     amount = amount_minor if amount_minor is not None else svc["sample_pending_minor"]
     intent = ledger.create_intent(
         kind="payment",
@@ -145,6 +159,8 @@ def prepare_donation(principal: str, foundation_ref: str, amount_minor: int) -> 
             error={"code": "foundation_not_found", "message": "Fundación no disponible."},
             speech="No encuentro esa organización para donar.",
         )
+    if bad := _bad_amount(amount_minor):
+        return bad
     intent = ledger.create_intent(
         kind="donation",
         principal=principal,
@@ -163,6 +179,8 @@ def prepare_donation(principal: str, foundation_ref: str, amount_minor: int) -> 
 def prepare_transfer(
     principal: str, recipient_ref: str, amount_minor: int, kind: str
 ) -> ToolResponse:
+    if bad := _bad_amount(amount_minor):
+        return bad
     intent = ledger.create_intent(
         kind="transfer",
         principal=principal,
@@ -223,7 +241,7 @@ def confirm_and_execute(principal: str, intent_id: str, approval_proof: str) -> 
                 "balance_minor": ledger.balance(principal),
                 "replayed": result == "replayed",
             },
-            speech=f"Listo, pago confirmado. Tu nuevo saldo es {_bs(ledger.balance(principal))}.",
+            speech=f"{_DONE.get(intent.kind, 'Listo, operación confirmada')}. Tu nuevo saldo es {_bs(ledger.balance(principal))}.",
         )
     if result == "expired":
         return ToolResponse(
@@ -244,6 +262,56 @@ def confirm_and_execute(principal: str, intent_id: str, approval_proof: str) -> 
         status=Status.error,
         error={"code": "execute_failed", "message": "No se pudo ejecutar."},
         speech="Algo falló al confirmar; no se movió dinero.",
+    )
+
+
+_DONE = {
+    "payment": "Listo, pago confirmado",
+    "parking": "Listo, ticket pagado: ya puedes salir",
+    "donation": "Listo, donación enviada. ¡Gracias por ayudar",
+    "transfer": "Listo, envío realizado",
+}
+
+
+def _describe(kind: str, details: dict) -> str:
+    match kind:
+        case "payment":
+            return f"Pago {details.get('service', 'de servicio')}"
+        case "parking":
+            return f"Estacionamiento · {details.get('ticket_ref', '')}".rstrip(" ·")
+        case "donation":
+            return f"Donación a {details.get('foundation', '')}".strip()
+        case "transfer":
+            return f"Envío a {details.get('recipient_ref', '')}".strip()
+    return "Operación"
+
+
+def list_movements(principal: str, limit: int = 20) -> ToolResponse:
+    ops = ledger.operations(principal)[: max(1, min(limit, 50))]
+    items = [
+        {
+            "operation_ref": op.operation_ref,
+            "kind": op.kind,
+            "title": _describe(op.kind, op.details),
+            "amount_minor": -(op.amount_minor + op.fee_minor),
+            "state": op.state,
+            "created_at": op.created_at,
+        }
+        for op in ops
+    ]
+    if not items:
+        speech = "Aún no tienes movimientos en esta sesión."
+    else:
+        last = items[0]
+        speech = (
+            f"Tienes {len(items)} movimiento{'s' if len(items) != 1 else ''}. "
+            f"El último: {last['title']} por {_bs(-last['amount_minor'])}."
+        )
+    return ToolResponse(
+        request_id=_rid(),
+        status=Status.ok,
+        data={"movements": items, "balance_minor": ledger.balance(principal)},
+        speech=speech,
     )
 
 
@@ -281,6 +349,7 @@ def open_app_screen(principal: str, screen_key: str, params: dict) -> ToolRespon
     allowed = {
         "home", "wallet", "pagar_servicios", "parking", "donaciones",
         "enviar_fondos", "movimientos", "recargas", "club", "mis_pagos",
+        "escaner_qr", "menu",
     }
     if screen_key not in allowed:
         return ToolResponse(
