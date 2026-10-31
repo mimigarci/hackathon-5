@@ -216,3 +216,31 @@
 .cr-promo h3 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; color: var(--cr-ink); }
 .cr-promo p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--cr-ink-2); }
 .cr-promo .cr-go { margin-top: 12px; width: 100%; }
+
+/* ---------------------------------------------------------------- «Créditos para ti» en el Home */
+.cr-home {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 18px 16px 16px; border-radius: 28px; color: var(--cr-ink);
+  background: linear-gradient(140deg, var(--cr-bg-a), var(--cr-bg-b));
+  box-shadow: var(--shadow-card), inset 0 0 0 1.5px var(--cr-ring);
+}
+.cr-home-lead { margin: 0; font-size: 14px; line-height: 1.4; color: var(--cr-ink-2); }
+.cr-tiers { display: grid; gap: 8px; }
+.cr-tier {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px;
+  min-height: 56px; padding: 12px 14px; border: 0; border-radius: 18px; text-align: left;
+  font: inherit; color: var(--cr-ink); background: var(--cr-surface); box-shadow: inset 0 0 0 1px var(--cr-line);
+  cursor: pointer;
+}
+.cr-tier b { font-size: 16px; font-weight: 600; }
+.cr-tier small { grid-column: 1; font-size: 13px; line-height: 1.35; color: var(--cr-ink-2); }
+.cr-tier > span { grid-column: 2; grid-row: 1 / span 2; font-size: 14px; font-weight: 600; color: var(--cr-lime); white-space: nowrap; }
+.cr-tier:active { background: rgba(255, 255, 255, .12); }
+.cr-tier:focus-visible, .cr-home-scan:focus-visible { outline: 2px solid var(--cr-lime); outline-offset: 2px; }
+.cr-home-scan {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; border: 0; border-radius: 999px; font: inherit; font-size: 16px; font-weight: 600;
+  color: var(--cr-on-lime); background: var(--cr-lime); cursor: pointer;
+}
+.cr-home-scan svg { width: 20px; height: 20px; }
+.cr-home-scan:active { background: var(--cr-lime-press); }

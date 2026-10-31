@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=15";
+import { installFeatures } from "./features.js?v=16";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -566,6 +566,7 @@ function paintCredit() {
     $(b).style.setProperty("--w", l && l.limit_minor > 0 ? `${Math.max(0, Math.min(100, (l.available_minor / l.limit_minor) * 100))}%` : "0%");
   };
   line(d, "crDaily", "crDailyBar", "crDailyOf"); line(t, "crTrip", "crTripBar", "crTripOf");
+  for (const [sel, l] of [[".js-cr-t1", d], [".js-cr-t2", t]]) for (const el of $$(sel)) el.textContent = l ? `${bs(l.available_minor)} disp.` : "—";
   const n = s?.next_installment, box = $("crNext");
   box.replaceChildren();
   if (!s) box.textContent = credit.failed ? "No pudimos consultar tu línea. Revisa tu conexión." : "Consultando tu línea…";
@@ -631,6 +632,7 @@ function paintOffers() {
     const list = offers.filter((o) => o.piso === piso);
     if (!list.length) continue;
     const g = mk("section", "cr-group"), h = mk("h2", null, PISOS[piso][0]), box = mk("div", "cr-list");
+    g.dataset.piso = piso;
     h.append(mk("small", null, PISOS[piso][1]));
     box.append(...list.map(offerCard));
     g.append(h, box);
@@ -672,6 +674,17 @@ SCREENS.crscan = {
   enter() { paintCredit(); if (!credit.scanning) paintOffers(); refreshCredit(); },
 };
 $("crScan").addEventListener("click", () => { haptic(10); scanCredit(); });
+// «Créditos para ti» del Home: data-crpiso="0" escanea todo; 1, 2 y 3 bajan a su grupo.
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-crpiso]");
+  if (!t) return;
+  haptic(6);
+  if (wisiOpen) closeWisi();
+  push("crscan");
+  if (!credit.offers.length) await scanCredit();
+  const g = $("crResults").querySelector(`.cr-group[data-piso="${t.dataset.crpiso}"]`);
+  g?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+});
 
 // --- detalle de la oferta: cuotas, cotización y CTA
 const optLabel = (o, n) => (o.piso === 3 ? `${n} meses` : `${n} ${n === 1 ? "cuota" : "cuotas"}`);
@@ -2071,7 +2084,7 @@ addEventListener("load", () => {
 async function boot(attempt = 0) {
   try {
     await newSession(false);
-    const [, svc, fnd, moves] = await Promise.all([refreshBalance(), callTool("list_services"), callTool("list_foundations"), loadMovements(), ctx.refreshCredit()]);
+    const [, svc, fnd, moves] = await Promise.all([refreshBalance(), callTool("list_services"), callTool("list_foundations"), loadMovements(), ctx.refreshCredit(), refreshCredit()]);
     state.services = svc.data?.services ?? [];
     state.foundations = fnd.data?.foundations ?? [];
     paintHomeServices(); paintServiceGrid(); paintFoundations(); paintBell(moves);
