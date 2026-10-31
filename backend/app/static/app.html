@@ -183,8 +183,8 @@
     <img class="logo" src="/assets/pagoDirecto.png" alt="PagoDirecto" />
     <div class="sp"></div>
     <div class="seg" role="group" aria-label="Voz de Wisi" id="voiceSel">
-      <button type="button" data-v="female" aria-pressed="true">Carito</button>
-      <button type="button" data-v="male" aria-pressed="false">Antonio</button>
+      <button type="button" data-v="female" aria-pressed="true">Clari</button>
+      <button type="button" data-v="male" aria-pressed="false">Miguel</button>
     </div>
     <button type="button" class="iconbtn" id="btnReset" aria-label="Nueva conversación" title="Nueva conversación">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
@@ -598,7 +598,7 @@ function paintVoice() { for (const b of document.querySelectorAll("#voiceSel but
 $("voiceSel").addEventListener("click", async (e) => {
   const v = e.target.closest("button")?.dataset.v; if (!v || v === voice) return;
   voice = v; store.set("wisi.voice", v); paintVoice(); haptic();
-  const who = v === "female" ? "Carito" : "Antonio";
+  const who = v === "female" ? "Clari" : "Miguel";
   if (live) { await endConv(); add("sys", `Cambiando a la voz de ${who}…`); startVoice(); }
   else { if (conv) await endConv(); toast(`Voz de ${who} seleccionada`); }
 });
