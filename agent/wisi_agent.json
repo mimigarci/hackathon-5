@@ -1,0 +1,252 @@
+{
+  "_comment": "Config del agente de ElevenLabs Conversational AI para Wisi. Usar con el API/SDK de ElevenLabs (POST /v1/convai/agents/create) o importar en el dashboard. Sustituir {{GATEWAY_URL}} por la URL pública del gateway WisiVoz y fijar el secreto de tool por cabecera. El system prompt completo está en system_prompt.md.",
+  "name": "Wisi - PagoDirecto",
+  "conversation_config": {
+    "agent": {
+      "language": "es",
+      "prompt": {
+        "prompt": "Ver agent/system_prompt.md (pegar aquí el contenido al crear el agente).",
+        "llm": "gemini-2.0-flash",
+        "temperature": 0.3,
+        "tools": [
+          {
+            "type": "webhook",
+            "name": "get_balance",
+            "description": "Consulta el saldo disponible del wallet del usuario.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/get_balance",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "list_services",
+            "description": "Lista los servicios que se pueden pagar. Filtra por category o query.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/list_services",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "category": {"type": "string", "description": "telefonia|electricidad|internet|condominio"},
+                  "query": {"type": "string"}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "explain_service",
+            "description": "Explica un servicio concreto y qué datos hacen falta para pagarlo.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/explain_service",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["service_ref"],
+                "properties": {
+                  "service_ref": {"type": "string"},
+                  "question": {"type": "string"}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "list_foundations",
+            "description": "Lista las organizaciones a las que se puede donar.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/list_foundations",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "prepare_payment",
+            "description": "Prepara (NO ejecuta) el pago de un servicio. Devuelve requires_confirmation con intent_id y resumen para que el usuario confirme.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/prepare_payment",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["service_ref", "account_number"],
+                "properties": {
+                  "service_ref": {"type": "string"},
+                  "account_number": {"type": "string"},
+                  "amount_minor": {"type": "integer", "description": "Monto en céntimos; omitir para cotizar el pendiente"}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "prepare_parking",
+            "description": "Prepara el pago del ticket de estacionamiento a partir del código del QR.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/prepare_parking",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["ticket_ref"],
+                "properties": {"ticket_ref": {"type": "string"}}
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "prepare_donation",
+            "description": "Prepara una donación a una organización.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/prepare_donation",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["foundation_ref", "amount_minor"],
+                "properties": {
+                  "foundation_ref": {"type": "string"},
+                  "amount_minor": {"type": "integer"}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "prepare_transfer",
+            "description": "Prepara un envío de fondos (P2P a un usuario, o P2C a un comercio).",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/prepare_transfer",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["recipient_ref", "amount_minor"],
+                "properties": {
+                  "recipient_ref": {"type": "string"},
+                  "amount_minor": {"type": "integer"},
+                  "kind": {"type": "string", "enum": ["p2p", "p2c"]}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "get_operation_status",
+            "description": "Consulta el estado real de una operación ya enviada.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/get_operation_status",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["operation_ref"],
+                "properties": {"operation_ref": {"type": "string"}}
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "create_support_case",
+            "description": "Abre un caso con Atención al Usuario cuando algo escapa a tus herramientas.",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/create_support_case",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["category", "summary"],
+                "properties": {
+                  "category": {"type": "string"},
+                  "summary": {"type": "string"},
+                  "related_operation_ref": {"type": "string"}
+                }
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "open_app_screen",
+            "description": "Navega a una pantalla permitida de la app (home, wallet, pagar_servicios, parking, donaciones, enviar_fondos, movimientos, recargas, club, mis_pagos).",
+            "api_schema": {
+              "url": "{{GATEWAY_URL}}/el/tools/open_app_screen",
+              "method": "POST",
+              "request_headers": {
+                "x-wisivoz-tool-secret": "{{WISIVOZ_TOOL_SECRET}}",
+                "x-wisivoz-principal": "{{principal}}"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "required": ["screen_key"],
+                "properties": {
+                  "screen_key": {"type": "string"},
+                  "params": {"type": "object"}
+                }
+              }
+            }
+          },
+          {
+            "type": "client",
+            "name": "confirm_payment_in_app",
+            "description": "Pide a la APP que muestre la hoja de confirmación segura (biometría/PIN) para un intent_id. SOLO la app ejecuta el dinero; tú nunca confirmas por tu cuenta. Espera a que la app informe el resultado.",
+            "parameters": {
+              "type": "object",
+              "required": ["intent_id"],
+              "properties": {"intent_id": {"type": "string"}}
+            }
+          }
+        ]
+      },
+      "first_message": "¡Hola! Soy Wisi. Puedo pagarte servicios, tu ticket de estacionamiento, donar o enviar fondos, aquí mismo. ¿Qué necesitas?"
+    },
+    "tts": {
+      "voice_id": "{{ELEVENLABS_VOICE_ID}}",
+      "model_id": "eleven_turbo_v2_5"
+    },
+    "asr": {
+      "quality": "high",
+      "language": "es"
+    }
+  },
+  "platform_settings": {
+    "auth": {
+      "enable_auth": true,
+      "_comment": "El cliente obtiene una signed URL desde el gateway (/api/session) para que el agent_id no se exponga."
+    }
+  }
+}

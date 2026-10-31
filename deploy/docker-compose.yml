@@ -1,0 +1,19 @@
+# Despliegue de Wisi en botflow.lat con Cloudflare Tunnel.
+# No abre puertos en el servidor: cloudflared sale hacia Cloudflare y éste
+# publica https://botflow.lat -> http://gateway:8000 (HTTPS automático).
+#
+# Uso (desde la raíz del repo):
+#   docker compose -f deploy/docker-compose.yml --env-file backend/.env up -d --build
+services:
+  gateway:
+    build: ../backend
+    env_file: ../backend/.env
+    restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:2025.10.0
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Falta CLOUDFLARE_TUNNEL_TOKEN en backend/.env}
+    depends_on: [gateway]
+    restart: unless-stopped

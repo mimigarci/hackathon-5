@@ -1,4 +1,20 @@
-# hackathon-5
+# hackathon-5 · Asistente IA en la app PagoDirecto
+
+Asistente de IA **dentro de la app PagoDirecto** que atiende al usuario por voz y
+chat y ejecuta las funciones de la app (pagar servicios, estacionamiento, donar,
+enviar fondos), reemplazando el salto del avatar **Wisi** a WhatsApp.
+
+El repo reúne **dos tracks complementarios** del mismo objetivo:
+
+| Track | Qué aporta | Carpetas |
+|---|---|---|
+| **App MVP** (Flutter + Supabase + Gemini) | App completa, flujos guiados "Ver en la app", intención con Gemini, ejecución server-side | `app/`, `supabase/` |
+| **WisiVoz** (gateway + voz ElevenLabs + REA) | Agente de voz real (ElevenLabs Conversational AI), gateway de tools con flujo seguro, y la ingeniería inversa de la app | `backend/`, `agent/`, `web/`, `flutter/wisi_voz/`, `docs/` |
+
+Comparten el mismo principio de seguridad: **el modelo nunca ejecuta dinero**; el
+paso final siempre pasa por confirmación y por checks server-side.
+
+---
 
 MVP of an **AI task assistant inside the PagoDirecto app**. The user tells the
 mascot what they need, by voice or text, and the assistant runs the right app
@@ -294,3 +310,41 @@ any state → cancelled        any state → error (with "Reintentar" / "Salir")
 | `lib/data/repository.dart` | Data interface + mock implementation |
 | `lib/data/supabase_repository.dart` | Supabase implementation |
 | `supabase/schema.sql` | Tables, RLS, new-user trigger, seed data |
+
+---
+
+## WisiVoz — gateway de voz (ElevenLabs Conversational AI) + REA
+
+Track paralelo centrado en una **voz real de agente** y en la ingeniería inversa
+de la app. Útil como back-end de tools y como demo de voz end-to-end.
+
+| Carpeta | Qué es | Lenguaje |
+|---|---|---|
+| `backend/` | Gateway WisiVoz: contrato de tools + ledger simulado + flujo intención→confirmación | Python (FastAPI) |
+| `agent/` | Agentes de ElevenLabs (voz Wisi es-VE) + aprovisionamiento | JSON + Python |
+| `web/` | Consola demo | React + TypeScript |
+| `flutter/wisi_voz/` | Widget que sustituye el handoff a WhatsApp | Flutter/Dart |
+| `docs/` | Ingeniería inversa (REA) y decisión técnica | — |
+
+### Webapp de voz funcional (una sola URL, sin túnel)
+```bash
+cd backend
+uv venv && uv pip install -e . && uv pip install pytest httpx
+uv run pytest -q                                   # 9 tests del flujo seguro
+uv run uvicorn app.main:app --port 8000
+cd .. && uv run --project backend python agent/provision_client_tools.py  # crea agentes es-VE
+# abre http://localhost:8000/      webapp móvil nueva (voz + chat con el agente, confirmación biométrica)
+# abre http://localhost:8000/demo  webapp anterior
+```
+Requiere `ELEVENLABS_API_KEY` en `backend/.env` (ver `.env.example`).
+Despliegue público en `https://botflow.lat` con Cloudflare Tunnel: ver [docs/05-despliegue-cloudflare.md](docs/05-despliegue-cloudflare.md).
+
+### Ingeniería inversa (REA)
+- `docs/01-mapa-rea-app.md` — mapa de la app PagoDirecto (Flutter, backend, mapa feature→tool).
+- `docs/02-arquitectura.md`, `docs/03-decision.md` — arquitectura y decisión.
+- `docs/04-rea-grok.md` — análisis de **Grok Bot** (agente de xAI) y patrones reutilizables.
+
+### Seguridad
+El agente **nunca ejecuta dinero**: las tools `prepare_*` crean una intención con
+vigencia; la ejecución pasa por la UI autenticada (biometría/PIN → `POST
+/api/confirm`), con idempotencia y autorización server-side.

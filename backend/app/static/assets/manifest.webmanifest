@@ -1,0 +1,15 @@
+{
+  "name": "Wisi · PagoDirecto",
+  "short_name": "Wisi",
+  "description": "Asistente de voz de PagoDirecto",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f9",
+  "theme_color": "#e6005c",
+  "lang": "es-VE",
+  "icons": [
+    { "src": "/assets/logo_pd.png", "sizes": "297x263", "type": "image/png", "purpose": "any" }
+  ]
+}
