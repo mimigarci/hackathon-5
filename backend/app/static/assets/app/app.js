@@ -47,6 +47,7 @@ const PHRASES = {
   think: ["Pensando", "Echando números", "Revisando tu wallet", "Wisificando", "Cuadrando la jugada", "Preparando todo"],
   pay: ["Verificando tu huella", "Firmando la operación", "Moviendo los bolívares", "Asentando el pago"],
   voice: ["Despertando a Wisi", "Calentando la voz", "Afinando el micrófono", "Conectando"],
+  mic: ["Esperando permiso del micrófono"],
 };
 function makeThink(kind, { dark = false, cancellable = false } = {}) {
   const el = document.createElement("span");
@@ -1170,6 +1171,21 @@ async function openConv(want) {
   })();
   try { return await starting; } finally { starting = null; }
 }
+// Pide el micrófono en cuanto Wisi despierta: si el navegador aún no tiene
+// permiso, salta su aviso nativo y el usuario sabe por qué antes de conectar.
+async function ensureMic() {
+  if (!navigator.mediaDevices?.getUserMedia) return; // openConv explica el motivo
+  let state = "prompt";
+  try { state = (await navigator.permissions?.query({ name: "microphone" }))?.state ?? "prompt"; } catch {}
+  if (state === "granted") return;
+  if (state === "denied") throw new Error("mic-denied");
+  thinkRow?.set("mic");
+  toast("Wisi necesita tu micrófono: acepta el permiso del navegador", 6000);
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  stream.getTracks().forEach((t) => t.stop()); // el SDK abre su propio stream
+  toast("Micrófono listo");
+  thinkRow?.set("voice");
+}
 async function startVoice() {
   if (live) return;
   const mic = $("btnMic");
@@ -1177,10 +1193,12 @@ async function startVoice() {
   setStatus("Conectando voz…");
   if (!wisiStarted) greet();
   showThinking(); thinkRow?.set("voice");
-  try { await openConv("voice"); hideThinking(); }
+  try { await ensureMic(); await openConv("voice"); hideThinking(); }
   catch (e) {
     hideThinking();
-    const msg = /Permission|NotAllowed|denied/i.test(String(e?.name || e?.message || e)) ? "Permite el acceso al micrófono para hablar con Wisi." : (e?.message || String(e));
+    const msg = e?.message === "mic-denied"
+      ? "El micrófono está bloqueado para esta página. Actívalo desde el candado de la barra de direcciones y vuelve a tocar el micrófono."
+      : /Permission|NotAllowed|denied/i.test(String(e?.name || e?.message || e)) ? "Permite el acceso al micrófono para hablar con Wisi." : (e?.message || String(e));
     add("err", msg);
     setLive(false);
   } finally { mic.classList.remove("busy"); }
