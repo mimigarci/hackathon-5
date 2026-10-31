@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=15";
+import { installFeatures } from "./features.js?v=16";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
