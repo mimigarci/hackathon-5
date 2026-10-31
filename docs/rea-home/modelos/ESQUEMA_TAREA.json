@@ -1,0 +1,569 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apgo:agent-task:v1",
+  "title": "Tarea del agente derivada del recorrido UI de Pago Directo",
+  "description": "Esquema de documentación y diseño. No es un contrato de la API real ni una autorización para actuar. No almacenar credenciales ni datos personales de la sesión.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "name",
+    "intent",
+    "scope",
+    "preconditions",
+    "steps",
+    "unknowns"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "name": {
+      "$ref": "#/$defs/fact"
+    },
+    "intent": {
+      "$ref": "#/$defs/fact"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app",
+        "version",
+        "account_scope",
+        "coverage"
+      ],
+      "properties": {
+        "app": {
+          "const": "com.paytech.pagodirecto"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "account_scope": {
+          "type": "string",
+          "description": "Describir tipo/alcance de cuenta sin identificar al cliente."
+        },
+        "coverage": {
+          "enum": [
+            "observado_parcial",
+            "observado_completo_para_escenario",
+            "candidato_estatico",
+            "propuesta"
+          ]
+        }
+      }
+    },
+    "preconditions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      },
+      "minItems": 1
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "provenance",
+        "evidence",
+        "rationale"
+      ],
+      "properties": {
+        "value": {},
+        "provenance": {
+          "enum": [
+            "observado",
+            "derivado",
+            "propuesto",
+            "desconocido"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "rationale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provenance": {
+                "const": "desconocido"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provenance": {
+                "enum": [
+                  "observado",
+                  "derivado"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "pantalla",
+            "nota_recorrido",
+            "evidencia_REA",
+            "texto_estatico",
+            "contrato_backend",
+            "prueba",
+            "propuesta"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope_limit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "source",
+        "data_type",
+        "requiredness",
+        "value_status",
+        "validation",
+        "dependencies",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "$ref": "#/$defs/fact"
+        },
+        "source": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "properties": {
+                "value": {
+                  "enum": [
+                    "usuario",
+                    "backend",
+                    "UI_segura",
+                    "contexto_autorizado",
+                    "desconocida",
+                    null
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "data_type": {
+          "$ref": "#/$defs/fact"
+        },
+        "requiredness": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "properties": {
+                "value": {
+                  "enum": [
+                    "obligatorio",
+                    "opcional",
+                    "condicional",
+                    "desconocida",
+                    null
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "value_status": {
+          "enum": [
+            "desconocido",
+            "faltante",
+            "disponible_autorizado",
+            "pendiente_UI_segura",
+            "no_aplica"
+          ]
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validation"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      },
+      "description": "Describir el slot sin almacenar valores personales reales. La fuente y obligatoriedad se justifican por separado."
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "scope",
+        "verification_status"
+      ],
+      "properties": {
+        "rule": {
+          "$ref": "#/$defs/fact"
+        },
+        "scope": {
+          "enum": [
+            "etiqueta",
+            "mascara",
+            "cliente",
+            "servidor",
+            "politica_propuesta",
+            "desconocido"
+          ]
+        },
+        "verification_status": {
+          "enum": [
+            "mensaje_observado",
+            "regla_probada",
+            "solo_copia_estatica",
+            "propuesta",
+            "desconocido"
+          ]
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "contract_status",
+        "effect",
+        "invoked",
+        "input_slot_ids",
+        "evidence"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "contract_status": {
+          "enum": [
+            "propuesto",
+            "documentado",
+            "probado",
+            "desconocido"
+          ]
+        },
+        "effect": {
+          "enum": [
+            "lectura",
+            "navegacion",
+            "preparacion",
+            "escritura_soporte",
+            "ejecucion_financiera_UI_segura",
+            "desconocido"
+          ]
+        },
+        "invoked": {
+          "type": "boolean"
+        },
+        "input_slot_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    },
+    "confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "needed",
+        "mechanism",
+        "performed",
+        "binding",
+        "evidence"
+      ],
+      "properties": {
+        "needed": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "properties": {
+                "value": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "mechanism": {
+          "$ref": "#/$defs/fact"
+        },
+        "performed": {
+          "type": "boolean"
+        },
+        "binding": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fact"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    },
+    "need": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "properties": {
+                "value": {
+                  "enum": [
+                    "usuario",
+                    "backend",
+                    "UI_segura",
+                    "contexto_autorizado",
+                    "desconocida",
+                    null
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "disponible_autorizado",
+            "por_implementar",
+            "por_confirmar",
+            "faltante"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "behavior",
+        "inputs",
+        "needs",
+        "tools",
+        "confirmation",
+        "output",
+        "evidence",
+        "unknowns"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "$ref": "#/$defs/fact"
+        },
+        "behavior": {
+          "$ref": "#/$defs/fact"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/need"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tool"
+          }
+        },
+        "confirmation": {
+          "$ref": "#/$defs/confirmation"
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "description"
+          ],
+          "properties": {
+            "state": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/fact"
+                },
+                {
+                  "properties": {
+                    "value": {
+                      "enum": [
+                        "no_iniciado",
+                        "recopilando",
+                        "listo_para_preparar",
+                        "requiere_confirmacion",
+                        "enviado",
+                        "pendiente",
+                        "completado",
+                        "rechazado",
+                        "cancelado",
+                        "desconocido",
+                        null
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "description": {
+              "$ref": "#/$defs/fact"
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

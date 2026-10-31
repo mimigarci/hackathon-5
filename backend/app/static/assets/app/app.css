@@ -243,6 +243,27 @@ h1, h2, h3, p { margin: 0; }
 .svc-tile.add { font-size: 12px; font-weight: 500; line-height: 1.2; text-align: center; color: var(--ink); gap: 2px; }
 .svc-tile.add b { font-size: 26px; font-weight: 400; line-height: 1; }
 
+/* carrusel horizontal (Club PagoDirecto, Sugerencias) */
+.hrow { display: flex; gap: 14px; overflow-x: auto; padding: 2px var(--gutter) 8px; margin: 0 calc(var(--gutter) * -1); scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); }
+.hrow::-webkit-scrollbar { display: none; }
+.hrow > * { flex: none; width: min(320px, calc(100% - 40px)); scroll-snap-align: start; }
+
+/* Sugerencias */
+.sug {
+  display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+  min-height: 236px; padding: 20px; border-radius: 28px; color: #fff;
+  background: linear-gradient(180deg, var(--a), var(--b));
+  box-shadow: var(--shadow-card);
+  transition: transform var(--t-press) var(--ease-out);
+}
+.sug:active { transform: scale(.98); }
+.sug-brand { display: flex; align-items: center; gap: 4px; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.sug-brand svg { width: 24px; height: 24px; color: #ffd233; }
+.sug-h { margin-top: auto; font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -.015em; }
+.sug-h em { font-style: normal; color: #ffd233; }
+.sug-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sug-tags span { background: var(--pd-strong); border-radius: var(--r-pill); padding: 4px 12px; font-size: 12px; font-weight: 500; }
+
 /* Funciones */
 .funcs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 6px; }
 .fn { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; text-align: center; min-width: 0; }

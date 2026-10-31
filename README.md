@@ -24,6 +24,9 @@ needs input. It always asks for confirmation before the final step.
 Stack: Flutter (Dart) app · Supabase (Postgres + Edge Functions in TypeScript) ·
 Gemini (intent analysis) · ElevenLabs (voice).
 
+Home feature coverage: [REA audit, observed inputs and modeling gaps](docs/rea-home/README.md).
+This audit distinguishes visible Home cards, partial agent specifications and implemented flows.
+
 ```
 app/        Flutter app (Android, iOS, web)
 supabase/   SQL schema, RLS policies and seed data
@@ -36,28 +39,41 @@ supabase/   SQL schema, RLS policies and seed data
 ```bash
 cd app
 flutter pub get
-flutter run                                   # mock data
-flutter run --dart-define-from-file=env.json  # connected to Supabase
+flutter run
 ```
 
-`app/env.json` (git-ignored, see `env.example.json`) holds the Supabase project
-URL and **publishable** key. Never put the service_role key, Gemini key or
-ElevenLabs key in the app; those live in Edge Function secrets.
-
-Without Supabase config the app runs on **mock data** (`lib/data/mock_data.dart`)
-that matches the reference screens. Set `MockData.showSampleData = true` to see
+The app runs on **mock data** (`lib/data/mock_data.dart`) that matches the
+reference screens. Never put the service_role key, Gemini key or ElevenLabs key
+in the app; those live in Edge Function secrets. Set `MockData.showSampleData = true` to see
 filled lists.
 
-### Supabase setup (MVP, no login)
+### Deploy (web, Vercel)
 
-1. Supabase dashboard → **SQL Editor** → run `supabase/schema.sql`.
-2. **Authentication → Sign In / Providers → enable "Allow anonymous sign-ins"**.
-3. In `main.dart`, call `Supabase.instance.client.auth.signInAnonymously()` when
-   there's no session. The user never sees a login. They get a real user id,
-   the `handle_new_user` trigger creates their profile and wallet, and row
-   level security keeps working unchanged. The session persists on the device.
-4. Seed demo data for that user (balance, registered services, pending
-   payments) from the SQL Editor so the assistant has something to act on.
+`app/vercel.json` installs Flutter (pinned to 3.47.8) on Vercel's build
+machine and runs `flutter build web`.
+
+1. Vercel → **Add New → Project** → import this repo.
+2. **Root Directory = `app`**. Leave the framework preset as "Other".
+3. Pushes to `main` deploy to production; other branches get preview URLs.
+
+Manual alternative (no Git integration):
+
+```bash
+cd app
+flutter build web --release
+npx vercel deploy build/web --prod
+```
+
+The Edge Functions deploy to Supabase separately (`supabase functions deploy`,
+`supabase secrets set`) and must allow the Vercel domain in their CORS headers.
+
+### Login
+
+The welcome screen has a single **Ingresar** button that opens the app on the
+mock data; "Cerrar sesión" in the Menu returns to it. There is no real sign-in,
+so the app doesn't connect to Supabase. `lib/data/supabase_repository.dart`,
+`supabase/schema.sql` and `supabase/migrations/` stay in the repo for when a
+real login comes back.
 
 ---
 

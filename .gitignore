@@ -12,6 +12,9 @@ dist/
 build/
 .next/
 coverage/
+.dart_tool/
+# Paquete Flutter (librería): el lock lo resuelve la app que lo consume
+flutter/wisi_voz/pubspec.lock
 
 # Sistema / editor
 .DS_Store

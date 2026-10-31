@@ -5,11 +5,19 @@ import '../widgets/app_header.dart';
 import '../widgets/common.dart';
 import '../widgets/home_sections.dart';
 import '../widgets/wallet_carousel.dart';
+import 'functions_router.dart';
+import 'insurance_screen.dart';
+import 'parking/vehicles_screen.dart';
+import 'services/service_manage_screen.dart';
+import 'services/services_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.onSeeAllPayments});
 
   final VoidCallback onSeeAllPayments;
+
+  void _push(BuildContext context, Widget screen) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +59,9 @@ class HomeScreen extends StatelessWidget {
                   const SectionTitle('Club PagoDirecto'),
                   ClubCarousel(
                     tasks: state.clubTasks,
-                    onComplete: (t) => openPlaceholder(context, t.title),
+                    onComplete: (t) => t.id == 'vehicle'
+                        ? _push(context, const VehiclesScreen())
+                        : openPlaceholder(context, t.title),
                   ),
                   SectionTitle(
                     'Mis pagos',
@@ -60,17 +70,16 @@ class HomeScreen extends StatelessWidget {
                   ),
                   MyServicesRow(
                     services: state.myServices,
-                    onRegister: () =>
-                        openPlaceholder(context, 'Registra tu servicio'),
-                    onServiceTap: (s) => openPlaceholder(context, s.name),
+                    onRegister: () => _push(context, const ServicesScreen()),
+                    onServiceTap: (s) => openServiceById(context, s.id),
                   ),
                   const SectionTitle('Funciones'),
-                  FunctionsGrid(
-                    onTap: (f) => openPlaceholder(context, f.label),
-                  ),
+                  FunctionsGrid(onTap: (f) => openFunction(context, f)),
                   const SectionTitle('Sugerencias'),
                   SuggestionsCarousel(
-                    onTap: (s) => openPlaceholder(context, s.brand),
+                    onTap: (s) => s.brand == 'Jomi'
+                        ? openServiceById(context, 'jomi')
+                        : _push(context, const InsuranceScreen()),
                   ),
                 ],
               ),
