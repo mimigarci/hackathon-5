@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=14";
+import { installFeatures } from "./features.js?v=15";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -1885,23 +1885,24 @@ async function brainRoute(text) {
   const p = data.params || {};
   try {
     hideThinking();
-    if (data.reply && !data.action.startsWith("credit")) say(data.reply); // las de crédito lo dicen ellas
+    // Una sola respuesta: el dato real o la operación preparada hablan por sí mismos.
+    const reply = () => { if (data.reply) say(data.reply); };
     switch (data.action) {
-      case "saldo": { const r = await refreshBalance(true); if (!data.reply) say(r.speech); break; }
+      case "saldo": { const r = await refreshBalance(true); say(r.speech); break; }
       case "movimientos": await handleLocal("movimientos"); break;
       case "pagar_servicio":
         if (p.service_ref && p.account_number) await prepareLocal("prepare_payment", { service_ref: p.service_ref, account_number: p.account_number, amount_minor: p.amount_minor ?? null });
-        else if (p.service_ref) { driveApp(); push("pay", { service_ref: p.service_ref }); }
-        else { driveApp(); push("services"); }
+        else if (p.service_ref) { reply(); driveApp(); push("pay", { service_ref: p.service_ref }); }
+        else { reply(); driveApp(); push("services"); }
         break;
       case "estacionamiento": await scanFromChat(); break;
       case "donar":
         if (p.foundation_ref || p.amount_minor) await prepareLocal("prepare_donation", { foundation_ref: p.foundation_ref || "fundana", amount_minor: p.amount_minor ?? 5000 });
-        else { driveApp(); push("donate"); }
+        else { reply(); driveApp(); push("donate"); }
         break;
       case "enviar":
         if (p.recipient_ref && p.amount_minor) await prepareLocal("prepare_transfer", { recipient_ref: p.recipient_ref, amount_minor: p.amount_minor, kind: "p2p" });
-        else { driveApp(); push("send", { recipient_ref: p.recipient_ref, amount_minor: p.amount_minor }); }
+        else { reply(); driveApp(); push("send", { recipient_ref: p.recipient_ref, amount_minor: p.amount_minor }); }
         break;
       case "creditos_escanear": await openCreditHome(true, data.reply); break;
       case "credito_ver":
@@ -1909,7 +1910,7 @@ async function brainRoute(text) {
         if (p.offer_id || p.vertical) await openCreditOffer({ offer_id: p.offer_id, vertical: p.vertical }, data.reply);
         else await openCreditHome(false, data.reply);
         break;
-      case "abrir_pantalla": { const nav = SCREEN_MAP[String(p.screen_key ?? "")]; if (!nav) return false; driveApp(); nav(); break; }
+      case "abrir_pantalla": { const nav = SCREEN_MAP[String(p.screen_key ?? "")]; if (!nav) return false; reply(); driveApp(); nav(); break; }
       default: return false;
     }
   } catch { hideThinking(); add("err", "No pude completar eso. Inténtalo de nuevo."); }
