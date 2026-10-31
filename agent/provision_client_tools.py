@@ -240,10 +240,8 @@ def build_tools() -> list[dict]:
     ]
 
 
-FIRST_MESSAGE = (
-    "¡Epa! Soy Wisi, el asistente con IA de Pago Directo. Nunca te pediré tu PIN ni te llamaré. "
-    "Pago tus servicios, escaneo tu ticket, recargo, te presto con Credirecto y te muestro tus créditos. ¿Qué hacemos?"
-)
+# Corto: en una llamada cada segundo de saludo es espera. Se presenta como IA y avisa del PIN.
+FIRST_MESSAGE = "¡Epa! Soy Wisi, tu asistente con IA. Nunca te pediré tu PIN. ¿Qué hacemos?"
 
 
 # Palabras que el reconocimiento de voz debe esperar (marcas y servicios).
