@@ -1,6 +1,6 @@
 // Wisi en Cloudflare Workers (plan gratuito): webapp estática + gateway WisiVoz.
 // Secretos (no van al repo): ELEVENLABS_API_KEY, WISIVOZ_SESSION_SECRET,
-// ELEVENLABS_AGENT_ID[_FEMALE|_MALE]. Ver ../docs/05-despliegue-cloudflare.md
+// ELEVENLABS_AGENT_ID[_FEMALE|_MALE], OPENROUTER_API_KEY (cerebro de Wisi; opcional). Ver ../docs/05-despliegue-cloudflare.md
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wisi-botflow",
@@ -24,7 +24,9 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Wallet"] }],
   "vars": {
     "WISIVOZ_INTENT_TTL": "180",
-    "WISIVOZ_SIGNED_PER_IP_10MIN": "30"
+    "WISIVOZ_SIGNED_PER_IP_10MIN": "30",
+    "OPENROUTER_MODEL_FAST": "mistralai/mistral-nemo,meta-llama/llama-3.1-8b-instruct,openai/gpt-oss-20b",
+    "OPENROUTER_MODEL_SMART": "anthropic/claude-haiku-5.5"
   },
   "observability": { "enabled": true }
 }

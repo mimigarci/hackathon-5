@@ -15,7 +15,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="/assets/app/app.css?v=8" />
+<link rel="stylesheet" href="/assets/app/app.css?v=9" />
+<link rel="stylesheet" href="/assets/app/credit.css?v=9" />
 </head>
 <body>
 <!-- Iconos (trazo 1.8, mismo lenguaje que la app) -->
@@ -49,6 +50,7 @@
     <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1-4A8 8 0 1 1 20 12z"/></symbol>
     <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-credit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 14.5h3.5"/></symbol>
     <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
   </defs>
 </svg>
@@ -91,6 +93,13 @@
               </div>
             </article>
           </div>
+          <!-- Credirecto: tarjeta negra y lima junto a la wallet -->
+          <button type="button" class="cr-card" data-push="credit">
+            <span class="cr-k"><i><svg aria-hidden="true"><use href="#i-credit"/></svg></i>Credirecto</span>
+            <small>Disponible en tu línea</small>
+            <span class="cr-avail num" id="crHomeAvail">—</span>
+            <span class="cr-cta">Escanea tus créditos<svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </button>
         </div>
 
         <section class="sec" aria-labelledby="h-wisi">
@@ -190,6 +199,7 @@
             </div>
             <button type="button" class="item" data-wisi><span class="ic"><svg><use href="#i-chat"/></svg></span><span class="tx"><b>Asistencia con Wisi</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
             <button type="button" class="item" data-go="movs"><span class="ic"><svg><use href="#i-movs"/></svg></span><span class="tx"><b>Movimientos</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button type="button" class="item" data-push="credit"><span class="ic cr-ic"><svg><use href="#i-credit"/></svg></span><span class="tx"><b>Credirecto</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
             <button type="button" class="item" data-push="parking"><span class="ic"><svg><use href="#i-car"/></svg></span><span class="tx"><b>Estacionamientos</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
             <button type="button" class="item" data-push="donate"><span class="ic"><svg><use href="#i-heart"/></svg></span><span class="tx"><b>Donaciones</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
             <button type="button" class="item danger" id="btnResetDemo"><span class="ic" style="color:var(--err)"><svg><use href="#i-refresh"/></svg></span><span class="tx"><b>Reiniciar demo</b><small>Nuevo saldo de Bs 5.000,00</small></span></button>
@@ -332,6 +342,55 @@
       <div class="sticky-cta"><button type="submit" form="sendForm" class="btn btn-primary btn-block" id="sendGo">Continuar</button></div>
     </section>
 
+    <!-- ============================ CREDIRECTO ============================ -->
+    <section class="screen push cr" id="s-credit" aria-label="Credirecto" inert>
+      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Credirecto</h1>
+        <button type="button" class="circle" data-wisi aria-label="Ayuda: hablar con Wisi"><img src="/assets/pd/header_help.svg" alt="" /></button></header>
+      <div class="scroll">
+        <article class="cr-hero" aria-label="Tu línea de crédito">
+          <div class="cr-hero-top"><span class="cr-badge" id="crLevel">Nivel —</span><span>Tu línea</span></div>
+          <div class="cr-lines">
+            <div class="cr-line"><small>Día a día</small><b class="num" id="crDaily">—</b><span class="cr-bar" aria-hidden="true"><span id="crDailyBar"></span></span><em id="crDailyOf"></em></div>
+            <div class="cr-line"><small>Turismo</small><b class="num" id="crTrip">—</b><span class="cr-bar" aria-hidden="true"><span id="crTripBar"></span></span><em id="crTripOf"></em></div>
+          </div>
+          <p class="cr-next" id="crNext">Consultando tu próxima cuota…</p>
+        </article>
+        <button type="button" class="cr-scan" id="crScan"><svg aria-hidden="true"><use href="#i-qr"/></svg>Escanear mis créditos</button>
+        <div class="cr-sec" style="margin-top:22px" id="crResults" aria-live="polite"></div>
+        <section class="cr-sec" aria-labelledby="h-crplans">
+          <h2 id="h-crplans">Mis planes</h2>
+          <div id="crPlans"></div>
+        </section>
+        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a bancos o aliados.</p>
+      </div>
+    </section>
+
+    <!-- ============================ OFERTA DE CRÉDITO ============================ -->
+    <section class="screen push cr" id="s-credit-offer" aria-label="Detalle del crédito" inert>
+      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Credirecto</h1><span></span></header>
+      <div class="scroll">
+        <article class="cr-detail">
+          <div class="top"><span class="cr-partner" id="coPartner"></span><span class="cr-pill" id="coPill"></span></div>
+          <h2 id="coTitle"></h2>
+          <p class="txt" id="coDetail"></p>
+          <div class="cr-price"><small>Precio</small><b class="num" id="coPrice"></b></div>
+          <p class="cr-reason" id="coReason"></p>
+        </article>
+        <section class="cr-sec" id="coPlanSec" aria-labelledby="coOptsLbl">
+          <h2 id="coOptsLbl">¿En cuántas cuotas?</h2>
+          <div class="cr-opts" id="coOpts" role="radiogroup" aria-labelledby="coOptsLbl"></div>
+          <p class="cr-freq" id="coFreq"></p>
+          <div class="cr-quote" id="coQuote" aria-live="polite"></div>
+        </section>
+        <section class="cr-sec" id="coPrecal" hidden></section>
+        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a bancos o aliados.</p>
+      </div>
+      <div class="sticky-cta">
+        <button type="button" class="cr-go" id="coGo" aria-describedby="coWhy">Usar Credirecto</button>
+        <p class="cr-why" id="coWhy"></p>
+      </div>
+    </section>
+
     <!-- ============================ ÉXITO ============================ -->
     <section class="screen push" id="s-done" aria-label="Operación completada" inert>
       <div class="scroll">
@@ -394,6 +453,7 @@
       <button type="button" class="chip" data-say="Envía 250 bolívares a @maria">Enviar a @maria</button>
       <button type="button" class="chip" data-say="Dona 50 bolívares a Fundana">Donar</button>
       <button type="button" class="chip" data-say="Muéstrame mis movimientos">Movimientos</button>
+      <button type="button" class="chip" data-say="Escanea mis créditos"><svg width="18" height="18" aria-hidden="true"><use href="#i-credit"/></svg>Mis créditos</button>
     </div>
     <form class="dock" id="dock" autocomplete="off">
       <label class="compose" id="compose">
@@ -432,6 +492,7 @@
         <button type="button" data-push="donate"><svg aria-hidden="true"><use href="#i-heart"/></svg>Donar</button>
         <button type="button" data-go="movs"><svg aria-hidden="true"><use href="#i-movs"/></svg>Movimientos</button>
         <button type="button" data-wisi><svg aria-hidden="true"><use href="#i-chat"/></svg>Wisi</button>
+        <button type="button" class="cr-more" data-push="credit"><svg aria-hidden="true"><use href="#i-credit"/></svg>Credirecto: tus créditos</button>
       </div>
       <button type="button" class="cancel" data-close>Cerrar</button>
     </div>
@@ -443,6 +504,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script type="module" src="/assets/app/app.js?v=8"></script>
+<script type="module" src="/assets/app/app.js?v=9"></script>
 </body>
 </html>
