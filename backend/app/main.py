@@ -132,6 +132,7 @@ async def create_session(
     principal: str = "demo-user",
     voice: str = "female",
     signed: bool = True,
+    webrtc: bool = False,
 ) -> dict[str, Any]:
     """Emite el token de sesión efímero y los datos de voz del agente.
 
@@ -146,12 +147,15 @@ async def create_session(
         signed = False
         agent_id = ""  # límite alcanzado: solo chat hasta que pase la ventana
     signed_url = await _elevenlabs_signed_url(agent_id) if signed else None
+    # WebRTC (mejor audio y cancelación de eco) usa un token de conversación.
+    conversation_token = await _elevenlabs_conversation_token(agent_id) if signed and webrtc else None
     return {
         "session_token": issue_session_token(principal),
         "principal": principal,
         "voice": voice,
         "elevenlabs_agent_id": agent_id or "<set ELEVENLABS_AGENT_ID>",
         "signed_url": signed_url,
+        "conversation_token": conversation_token,
         "voice_enabled": bool(signed_url) if signed else bool(settings.elevenlabs_api_key and agent_id),
     }
 
@@ -180,6 +184,25 @@ async def _elevenlabs_signed_url(agent_id: str) -> str | None:
             )
             r.raise_for_status()
             return r.json().get("signed_url")
+    except Exception:
+        return None
+
+
+async def _elevenlabs_conversation_token(agent_id: str) -> str | None:
+    """Token de conversación WebRTC de ElevenLabs (server-side)."""
+    if not (settings.elevenlabs_api_key and agent_id):
+        return None
+    import httpx
+
+    url = "https://api.elevenlabs.io/v1/convai/conversation/token"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                url, params={"agent_id": agent_id},
+                headers={"xi-api-key": settings.elevenlabs_api_key},
+            )
+            r.raise_for_status()
+            return r.json().get("token")
     except Exception:
         return None
 
@@ -282,6 +305,20 @@ def api_tool(
             return tools.get_operation_status(principal, b.get("operation_ref", ""))
         case "list_movements":
             return tools.list_movements(principal, int(b.get("limit", 20)))
+        case "list_catalog":
+            return tools.list_catalog(b.get("section", ""), b.get("type"))
+        case "prepare_purchase":
+            return tools.prepare_purchase(
+                principal, b.get("product_ref", ""), int(b.get("quantity", 1) or 1), b.get("plate")
+            )
+        case "prepare_topup":
+            return tools.prepare_topup(principal, b.get("method", ""), int(b.get("amount_minor", 0)))
+        case "get_credit":
+            return tools.get_credit(principal)
+        case "prepare_credit":
+            return tools.prepare_credit(principal, int(b.get("amount_minor", 0)))
+        case "prepare_credit_payment":
+            return tools.prepare_credit_payment(principal, int(b.get("amount_minor", 0)))
         case "create_support_case":
             return tools.create_support_case(
                 principal, b.get("category", ""), b.get("summary", ""),

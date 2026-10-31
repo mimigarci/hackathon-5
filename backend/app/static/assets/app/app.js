@@ -3,15 +3,36 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
+import { installFeatures } from "./features.js?v=9";
+
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const app = $("app");
 
 // ============================================================ utilidades
+// Sin login: todo lo del usuario vive en cookies (1 año, compartidas entre
+// botflow.lat y www). localStorage queda de respaldo y para migrar datos viejos.
+const COOKIE_SCOPE = (/(^|\.)botflow\.lat$/.test(location.hostname) ? "; Domain=.botflow.lat" : "") + (location.protocol === "https:" ? "; Secure" : "");
 const store = {
-  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  get(k, d) {
+    const m = document.cookie.match(new RegExp("(?:^|; )" + k.replace(/\./g, "\\.") + "=([^;]*)"));
+    if (m) { try { return decodeURIComponent(m[1]); } catch {} }
+    try { const v = localStorage.getItem(k); if (v != null) { this.set(k, v); return v; } } catch {}
+    return d;
+  },
+  set(k, v) {
+    document.cookie = `${k}=${encodeURIComponent(v)}; Max-Age=31536000; Path=/; SameSite=Lax${COOKIE_SCOPE}`;
+    try { localStorage.setItem(k, v); } catch {}
+  },
+  del(k) {
+    document.cookie = `${k}=; Max-Age=0; Path=/; SameSite=Lax${COOKIE_SCOPE}`;
+    try { localStorage.removeItem(k); } catch {}
+  },
+};
+const storeJSON = {
+  get(k, d) { try { return JSON.parse(store.get(k, null)) ?? d; } catch { return d; } },
+  set(k, v) { store.set(k, JSON.stringify(v)); },
 };
 const fmt = new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const bs = (minor) => "Bs " + fmt.format(Number(minor) / 100);
@@ -94,16 +115,21 @@ const state = {
   hidden: store.get("pd.hide", "0") === "1",
   services: [],
   foundations: [],
-  localMoves: [],      // respaldo si el gateway no expone list_movements
-  movesFromServer: true,
+  credit: null,
+  resume: null,        // operación a retomar tras recargar por saldo insuficiente
 };
-const LOGOS = { digitel: "digitel", movistar: "movistar", movilnet: "movilnet", corpoelec: "corpoelec", cantv: "cantv" };
+const LOGOS = { digitel: "digitel", movistar: "movistar", movilnet: "movilnet", corpoelec: "corpoelec", cantv: "cantv", simpletv: "simpletv", inter: "inter" };
+const MY_SERVICES = ["digitel", "movilnet", "movistar", "corpoelec", "cantv"]; // «Mis pagos» de la cuenta demo
+const myServices = () => state.services.filter((s) => MY_SERVICES.includes(s.service_ref));
 const logoOf = (ref) => (LOGOS[ref] ? `/assets/pd/logos/${LOGOS[ref]}.png` : null);
-const CAT = { telefonia: "Telefonía", electricidad: "Electricidad", internet: "Internet y teléfono", condominio: "Condominio" };
+const CAT = { telefonia: "Telefonía", electricidad: "Electricidad", internet: "Internet y teléfono", tv: "Televisión", asistencia: "Asistencia", hogar: "Hogar", condominio: "Condominio" };
+const LOW_BALANCE_MINOR = 500_00;
 
 function setBalance(minor, flash = false) {
   if (minor == null) return;
   state.balance = minor;
+  store.set("pd.bal", String(minor));
+  $("lowBal").hidden = minor > LOW_BALANCE_MINOR;
   for (const el of $$(".js-bal")) el.textContent = state.hidden ? "Bs ••••" : bs(minor);
   if (flash && !reduced) for (const el of $$(".wallet .amt, .total .js-bal")) { el.classList.remove("balance-flash"); void el.offsetWidth; el.classList.add("balance-flash"); }
 }
@@ -126,8 +152,18 @@ if (!principal) newPrincipal();
 let voice = store.get("wisi.voice", "female");
 let token = null, voiceEnabled = false;
 
-async function newSession(signed = true) {
-  const r = await fetch(`${GW}/api/session?principal=${encodeURIComponent(principal)}&voice=${voice}&signed=${signed}`, { method: "POST" });
+async function fetchRetry(url, opts, tries = 3) {
+  for (let i = 0; ; i++) {
+    try {
+      const r = await fetch(url, opts);
+      if (r.status < 500 || i >= tries - 1) return r;
+    } catch (e) { if (i >= tries - 1) throw e; }
+    await sleep(500 * 2 ** i);
+  }
+}
+async function newSession(signed = true, webrtc = false) {
+  const q = `principal=${encodeURIComponent(principal)}&voice=${voice}&signed=${signed}&webrtc=${webrtc}`;
+  const r = await fetchRetry(`${GW}/api/session?${q}`, { method: "POST" });
   if (!r.ok) throw new Error("session " + r.status);
   const s = await r.json();
   token = s.session_token;
@@ -136,7 +172,7 @@ async function newSession(signed = true) {
 }
 async function api(path, { body, method = "POST", retried = false } = {}) {
   if (!token) await newSession(false);
-  const r = await fetch(`${GW}${path}`, {
+  const r = await fetchRetry(`${GW}${path}`, {
     method,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: body ? JSON.stringify(body) : undefined,
@@ -155,15 +191,11 @@ async function refreshBalance(flash = false) {
   setBalance(r.data?.balance_minor, flash);
   return r;
 }
+// El servidor es la única fuente de saldo y movimientos: siempre cuadran entre sí.
 async function loadMovements() {
-  if (state.movesFromServer) {
-    try {
-      const r = await callTool("list_movements");
-      if (r.data?.balance_minor != null) setBalance(r.data.balance_minor);
-      return r.data?.movements ?? [];
-    } catch (e) { if (e.status === 404) state.movesFromServer = false; else throw e; }
-  }
-  return state.localMoves;
+  const r = await callTool("list_movements");
+  if (r.data?.balance_minor != null) setBalance(r.data.balance_minor);
+  return r.data?.movements ?? [];
 }
 
 // ============================================================ router (iOS push)
@@ -259,7 +291,7 @@ function replace(name, params) {
 function paintHomeServices() {
   const row = $("homeSvcs");
   $$(".svc-tile:not(.add)", row).forEach((n) => n.remove());
-  for (const s of state.services) {
+  for (const s of myServices()) {
     const src = logoOf(s.service_ref);
     if (!src) continue;
     const b = document.createElement("button");
@@ -271,7 +303,7 @@ function paintHomeServices() {
 }
 
 // --- movimientos
-const KIND_ICON = { payment: "#i-receipt", parking: "#i-car", donation: "#i-heart", transfer: "#i-send" };
+const KIND_ICON = { payment: "#i-receipt", parking: "#i-car", donation: "#i-heart", transfer: "#i-send", topup: "#i-bank", credit: "#i-bank", credit_payment: "#i-bank", parking_meter: "#i-meter", insurance: "#i-shield", tickets: "#i-ticket", welcome: "#i-bank" };
 let movFilter = "all";
 function moveRow(m) {
   const d = document.createElement("div");
@@ -292,7 +324,7 @@ SCREENS.movs = {
     try {
       const moves = (await loadMovements()).filter((m) => movFilter === "all" || (movFilter === "in" ? m.amount_minor > 0 : m.amount_minor < 0));
       if (!moves.length) {
-        list.innerHTML = `<div class="empty"><img src="/assets/wisi_avatar.png" alt="" /><b>${movFilter === "in" ? "Aún no tienes ingresos" : "Aún no tienes movimientos"}</b>Cuando pagues algo con tu saldo de demo aparecerá aquí.</div>`;
+        list.innerHTML = `<div class="empty"><b>${movFilter === "in" ? "Aún no tienes ingresos" : "Aún no tienes movimientos"}</b>Cuando pagues algo con tu saldo de demo aparecerá aquí.</div>`;
         if (movFilter !== "in") {
           const b = document.createElement("button");
           b.type = "button"; b.className = "btn btn-primary btn-sm"; b.textContent = "Escanear un ticket";
@@ -325,7 +357,7 @@ SCREENS.pagos = {
     let moves = [];
     try { moves = await loadMovements(); } catch {}
     const paidNames = new Set(moves.filter((m) => m.kind === "payment").map((m) => m.title.replace(/^Pago /, "")));
-    const pending = state.services.filter((s) => !paidNames.has(s.name));
+    const pending = myServices().filter((s) => !paidNames.has(s.name));
     if (payFilter === "pend") {
       const total = pending.reduce((a, s) => a + (s.sample_pending_minor || 0), 0);
       $("payTotalLbl").textContent = "Total por pagar";
@@ -365,12 +397,12 @@ $("payFilter").addEventListener("click", (e) => {
 
 // --- servicios (lista) y pago
 function paintServiceGrid() {
-  $("svcGrid").replaceChildren(...state.services.map((s) => {
+  $("svcGrid").replaceChildren(...state.services.filter((s) => s.service_ref !== "condominio").map((s) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "logo-card"; b.setAttribute("aria-label", s.name);
     const src = logoOf(s.service_ref);
     b.innerHTML = src ? `<img src="${src}" alt="" />` : `<span style="font-weight:600;font-size:17px">${s.name}</span>`;
-    b.onclick = () => push("pay", { service_ref: s.service_ref });
+    b.onclick = () => (s.service_ref === "jomi" ? push("jomi") : push("pay", { service_ref: s.service_ref }));
     return b;
   }));
 }
@@ -523,6 +555,12 @@ const DONE = {
   parking: (s) => ["Ticket pagado", `Estacionamiento · ${s.ticket_ref ?? ""}. Ya puedes salir.`],
   donation: (s) => ["¡Gracias por donar!", `Donación a ${s.foundation ?? ""}`],
   transfer: (s) => ["Envío realizado", `Enviado a ${s.recipient_ref ?? ""}`],
+  topup: (s) => ["Recarga exitosa", `${s.method ?? "Wallet"} · +50 pts del Club`],
+  credit: (s) => ["Crédito en tu wallet", `Credirecto · ${s.installments ?? 4} cuotas de ${bs(s.installment_minor ?? 0)}`],
+  credit_payment: () => ["Abono realizado", "Credirecto"],
+  parking_meter: (s) => ["Parquímetro activo", `${s.product ?? ""} · ${s.quantity ?? 1} h · ${s.plate ?? ""}`],
+  insurance: (s) => ["Póliza activa", s.product ?? ""],
+  tickets: (s) => ["Boletos comprados", `${s.product ?? ""} × ${s.quantity ?? 1}`],
 };
 function showDone(op, res) {
   const [title, what] = (DONE[op.kind] || (() => ["¡Listo!", ""]))(op.s);
@@ -532,10 +570,18 @@ function showDone(op, res) {
   const rows = [["Referencia", res.data?.operation_ref ?? "—"], ["Fecha", new Date().toLocaleString("es-VE", { dateStyle: "medium", timeStyle: "short" })], ["Comisión", bs(0)], ["Nuevo saldo", bs(res.data?.balance_minor ?? state.balance)]];
   $("doneList").replaceChildren(...rows.map(([a, b]) => { const d = document.createElement("div"); d.innerHTML = "<dt></dt><dd class='num'></dd>"; d.children[0].textContent = a; d.children[1].textContent = b; return d; }));
   if (op.kind === "parking" && tkCtx) { tkCtx.paid = true; parkStep(3); }
+  const resume = state.resume && ops.get(state.resume);
+  const canResume = resume && (op.kind === "topup" || op.kind === "credit") && resume.state === "pending";
+  $("doneOk").textContent = canResume ? `Continuar: ${resume.k.t(resume.s)}` : "Volver al inicio";
+  if (!canResume) state.resume = null;
   replace("done");
   setTimeout(() => $("doneTitle").focus({ preventScroll: true }), 500);
 }
-$("doneOk").addEventListener("click", () => go("home"));
+$("doneOk").addEventListener("click", () => {
+  const id = state.resume; state.resume = null;
+  if (id && ops.get(id)?.state === "pending") return confirmOp(id, "ui");
+  go("home");
+});
 
 // ============================================================ escáner QR
 // Cámara real (BarcodeDetector nativo o jsQR) y modo demo si no hay cámara.
@@ -686,7 +732,7 @@ async function onScanHit(s, text) {
     if (s.done) return;
     await sleep(reduced ? 0 : 700);
     if (prep.status === "requires_confirmation") {
-      const op = registerOp("prepare_parking", prep, { chat: wisiStarted });
+      const op = registerOp("prepare_parking", prep, { ticket_ref: ref });
       const params = { ref, entry, intent_id: op.id, amount: op.s.amount_minor };
       scan = null; thinkFloat.hide(); clearTimeout(s.timer);
       replace("ticket", params);
@@ -716,44 +762,31 @@ function scanFromUI() { startScan().then((r) => r && notifyAgent(`El usuario esc
 
 // ============================================================ operaciones (preparar → confirmar)
 const ops = new Map();
+const QTY_LABEL = (s) => (s.unit === "hora" ? `${s.quantity ?? 1} h${s.plate ? ` · ${s.plate}` : ""}` : s.unit === "boleto" ? `${s.quantity ?? 1} boleto(s)` : "1 mes");
+const PURCHASE_KIND = { parquimetros: "parking_meter", seguros: "insurance", boleteria: "tickets" };
+const PURCHASE_NAME = { parking_meter: "Parquímetro", insurance: "Seguro", tickets: "Boletería" };
 const KIND = {
-  prepare_payment: { kind: "payment", ic: "#i-receipt", t: (s) => `Pago ${s.service ?? "servicio"}`, sub: (s) => (s.account_number ? `Cuenta ${s.account_number}` : "") },
-  prepare_parking: { kind: "parking", ic: "#i-car", t: () => "Estacionamiento", sub: (s) => `Ticket ${s.ticket_ref ?? ""}` },
-  prepare_donation: { kind: "donation", ic: "#i-heart", t: (s) => `Donación a ${s.foundation ?? ""}`, sub: () => "Aporte solidario" },
-  prepare_transfer: { kind: "transfer", ic: "#i-send", t: (s) => `Envío a ${s.recipient_ref ?? ""}`, sub: () => "Wallet a wallet" },
+  prepare_payment: { kind: "payment", t: (s) => `Pago ${s.service ?? "servicio"}`, sub: (s) => (s.account_number ? `Cuenta ${s.account_number}` : "") },
+  prepare_parking: { kind: "parking", t: () => "Estacionamiento", sub: (s) => `Ticket ${s.ticket_ref ?? ""}` },
+  prepare_donation: { kind: "donation", t: (s) => `Donación a ${s.foundation ?? ""}`, sub: () => "Aporte solidario" },
+  prepare_transfer: { kind: "transfer", t: (s) => `Envío a ${s.recipient_ref ?? ""}`, sub: () => "Wallet a wallet" },
+  prepare_topup: { kind: "topup", t: (s) => `Recarga · ${s.method ?? "Wallet"}`, sub: () => "Llega al instante a tu wallet" },
+  prepare_credit: { kind: "credit", t: () => "Credirecto a tu wallet", sub: (s) => `${s.installments ?? 4} cuotas de ${bs(s.installment_minor ?? 0)}` },
+  prepare_credit_payment: { kind: "credit_payment", t: () => "Abono a Credirecto", sub: () => "Desde tu wallet" },
+  prepare_purchase: { t: (s) => `${PURCHASE_NAME[PURCHASE_KIND[s.section]] ?? "Compra"} · ${s.product ?? ""}`, sub: QTY_LABEL },
 };
-function registerOp(tool, res, { chat = true } = {}) {
+const SUMS_TO_WALLET = new Set(["topup", "credit"]); // no necesitan saldo
+/** Registra lo que Wisi o la UI prepararon. La confirmación vive en la app, no en el chat. */
+function registerOp(tool, res, params = null) {
   const id = res.data?.intent_id;
   if (!id) return null;
   if (ops.has(id)) return ops.get(id);
-  const k = KIND[tool] || { kind: "other", ic: "#i-receipt", t: () => "Operación", sub: () => "" };
-  const op = { id, s: res.data.summary || {}, k, kind: k.kind, state: "pending", tool, t: Date.now() };
+  const k = KIND[tool] || { kind: "other", t: () => "Operación", sub: () => "" };
+  const s = res.data.summary || {};
+  const op = { id, s, k, kind: k.kind ?? PURCHASE_KIND[s.section] ?? "other", state: "pending", tool, params, t: Date.now() };
   ops.set(id, op);
-  if (chat) {
-    const card = document.createElement("div");
-    card.className = "op";
-    card.innerHTML = `<div class="row"><div class="ic"><svg><use href="${k.ic}"/></svg></div><div style="min-width:0"><div class="t"></div><div class="s"></div></div><div class="amt num"></div></div>
-      <div class="acts"><button type="button" class="btn btn-ghost">Cancelar</button><button type="button" class="btn btn-primary">Confirmar</button></div><div class="state" hidden></div>`;
-    card.querySelector(".t").textContent = k.t(op.s);
-    card.querySelector(".s").textContent = k.sub(op.s);
-    card.querySelector(".amt").textContent = op.s.amount_minor != null ? bs(op.s.amount_minor) : "";
-    card.querySelector(".btn-primary").onclick = () => confirmOp(id, "card");
-    card.querySelector(".btn-ghost").onclick = () => { finishOp(id, "off", "Operación cancelada"); notifyAgent(`El usuario canceló ${k.t(op.s)}.`); };
-    op.card = card;
-    hideThinking();
-    $("chat").append(card);
-    scrollChat();
-  }
+  hideThinking();
   return op;
-}
-function finishOp(id, cls, text) {
-  const op = ops.get(id); if (!op) return;
-  op.state = cls;
-  if (!op.card) return;
-  op.card.classList.add(cls);
-  op.card.querySelector(".acts")?.remove();
-  const st = op.card.querySelector(".state"); st.hidden = false; st.textContent = text;
-  if (cls === "done") op.card.querySelector(".ic use").setAttribute("href", "#i-check");
 }
 /** Lleva la UI a la pantalla de la operación que preparó Wisi, ya rellenada. */
 function showOpInApp(op) {
@@ -778,6 +811,23 @@ function showOpInApp(op) {
     case "transfer":
       push("send", { recipient_ref: s.recipient_ref, amount_minor: s.amount_minor, intent_id: op.id });
       break;
+    case "topup":
+      push("deposit", { method: op.params?.method ?? "pago_movil", amount_minor: s.amount_minor, intent_id: op.id });
+      break;
+    case "credit":
+      push("credit", { amount_minor: s.amount_minor, intent_id: op.id });
+      break;
+    case "parking_meter":
+      push("meter", { product_ref: s.product_ref, quantity: s.quantity, plate: s.plate, intent_id: op.id });
+      break;
+    case "insurance":
+      push("insurance", { product_ref: s.product_ref, intent_id: op.id });
+      break;
+    case "tickets":
+      push("tickets", { product_ref: s.product_ref, quantity: s.quantity, intent_id: op.id });
+      break;
+    default:
+      push("review", op);
   }
 }
 async function runPrepare(tool, params, btn) {
@@ -785,7 +835,7 @@ async function runPrepare(tool, params, btn) {
   try {
     const res = await callTool(tool, params);
     if (res.status !== "requires_confirmation") { toast(res.speech || "No se pudo preparar la operación"); return null; }
-    const op = registerOp(tool, res, { chat: false });
+    const op = registerOp(tool, res, params);
     return confirmOp(op.id, "ui");
   } catch {
     toast("Sin conexión con PagoDirecto. Inténtalo de nuevo.");
@@ -808,19 +858,37 @@ function closeSheet(id) {
   ret?.focus?.({ preventScroll: true });
 }
 let sheetBusy = false;
+/** Saldo insuficiente: propone recargar lo justo (o Credirecto) y retoma el pago al terminar. */
+function paintShort(op, missing, close) {
+  const box = $("cfShort");
+  box.hidden = !missing;
+  if (!missing) return box.replaceChildren();
+  const topup = Math.max(100_00, Math.ceil(missing / 100_00) * 100_00);
+  const leave = (name, params) => () => { state.resume = op.id; close("away"); push(name, params); };
+  const mk = (cls, label, onclick) => { const b = document.createElement("button"); b.type = "button"; b.className = `btn ${cls}`; b.textContent = label; b.onclick = onclick; return b; };
+  const title = document.createElement("b"); title.textContent = `Te faltan ${bs(missing)}`;
+  const text = document.createElement("p"); text.textContent = "Recarga ahora, gana +50 pts del Club y retomamos este pago.";
+  const row = document.createElement("div"); row.className = "row";
+  row.append(mk("btn-primary", `Recargar ${bs(topup).replace(",00", "")}`, leave("deposit", { method: "pago_movil", amount_minor: topup })));
+  if ((state.credit?.available_minor ?? 0) >= missing) row.append(mk("btn-ghost", "Usar Credirecto", leave("credit", { amount_minor: Math.min(topup, state.credit.available_minor) })));
+  box.replaceChildren(title, text, row);
+}
 function askApproval(op) {
   return new Promise((resolve) => {
     const ok = $("cfOk"), no = $("cfNo"), wrap = $("confirm");
     const amt = op.s.amount_minor;
     $("cfSub").textContent = op.k.t(op.s);
     $("cfAmt").textContent = amt != null ? bs(amt) : "";
-    const short = state.balance != null && amt != null && amt > state.balance;
-    const rows = [["Concepto", op.k.t(op.s)], ...(op.k.sub(op.s) ? [["Detalle", op.k.sub(op.s)]] : []), ["Comisión", bs(0)], ["Desde", "Wallet PagoDirecto"]];
-    if (state.balance != null && amt != null) rows.push([short ? "Saldo disponible" : "Saldo después", bs(short ? state.balance : state.balance - amt)]);
+    const short = !SUMS_TO_WALLET.has(op.kind) && state.balance != null && amt != null && amt > state.balance;
+    const adds = SUMS_TO_WALLET.has(op.kind);
+    const rows = [["Concepto", op.k.t(op.s)], ...(op.k.sub(op.s) ? [["Detalle", op.k.sub(op.s)]] : []), ["Comisión", bs(0)], [adds ? "Hacia" : "Desde", "Wallet PagoDirecto"]];
+    if (state.balance != null && amt != null) rows.push([short ? "Saldo disponible" : "Saldo después", bs(short ? state.balance : state.balance + (adds ? amt : -amt))]);
     $("cfList").replaceChildren(...rows.map(([a, b]) => { const d = document.createElement("div"); d.innerHTML = "<dt></dt><dd class='num'></dd>"; d.children[0].textContent = a; d.children[1].textContent = b; return d; }));
     ok.className = "bio"; ok.disabled = short;
     $("cfOkTxt").textContent = short ? "Saldo insuficiente" : "Confirmar con huella";
-    openSheet("confirm", short ? no : ok);
+    ok.hidden = short;
+    paintShort(op, short ? amt - state.balance : 0, (v) => close(v));
+    openSheet("confirm", short ? $("cfShort").querySelector("button") : ok);
     let t = null;
     const close = (v) => {
       t?.stop();
@@ -852,12 +920,14 @@ function askApproval(op) {
 }
 /** Parámetros para volver a cotizar una operación (las intenciones caducan). */
 function paramsOf(op) {
+  if (op.params) return op.params;
   const s = op.s;
   switch (op.kind) {
     case "parking": return { ticket_ref: s.ticket_ref };
     case "payment": return { service_ref: state.services.find((x) => x.name === s.service)?.service_ref, account_number: s.account_number, amount_minor: s.amount_minor };
     case "donation": return { foundation_ref: state.foundations.find((x) => x.name === s.foundation)?.foundation_ref, amount_minor: s.amount_minor };
     case "transfer": return { recipient_ref: s.recipient_ref, amount_minor: s.amount_minor, kind: s.kind || "p2p" };
+    case "parking_meter": case "insurance": case "tickets": return { product_ref: s.product_ref, quantity: s.quantity, plate: s.plate };
   }
   return null;
 }
@@ -866,8 +936,9 @@ async function freshOp(op) {
   if (Date.now() - op.t < INTENT_TTL_MS) return op;
   const res = await callTool(op.tool, paramsOf(op));
   if (res.status !== "requires_confirmation") throw new Error(res.speech || "requote");
-  const fresh = registerOp(op.tool, res, { chat: false });
-  fresh.card = op.card; op.state = "off";
+  const fresh = registerOp(op.tool, res, op.params);
+  op.state = "off";
+  if (state.resume === op.id) state.resume = fresh.id;
   // La UI sigue apuntando a la operación vigente.
   if (tkCtx?.intent_id === op.id) tkCtx.intent_id = fresh.id;
   for (const c of [payCtx?.bound, donCtx.bound, sendCtx.bound]) if (c?.intent_id === op.id) c.intent_id = fresh.id;
@@ -885,31 +956,35 @@ async function confirmOp(id, source) {
     try { op = await freshOp(op); } catch (e) { toast(/^(requote|\/api)/.test(e.message) ? "No pudimos renovar la cotización. Inténtalo de nuevo." : e.message); return { status: "error", speech: "No pude renovar la cotización." }; }
     id = op.id; op.state = "pending";
     const approved = await askApproval(op);
+    if (approved === "away") {
+      notifyAgent(`El usuario no tiene saldo para ${op.k.t(op.s)} y fue a recargar; la operación se retoma al terminar.`);
+      return { status: "denied", speech: "Saldo insuficiente: el usuario está recargando y la operación se retomará sola." };
+    }
     if (!approved) {
-      if (source === "card") finishOp(id, "off", "Confirmación cancelada");
       if (source !== "agent") notifyAgent(`El usuario canceló la confirmación de ${op.k.t(op.s)}.`);
       return { status: "denied", speech: "El usuario canceló la confirmación." };
     }
     const { approval_proof } = await api(`/api/approval-proof?intent_id=${encodeURIComponent(id)}`);
     const res = await api("/api/confirm", { body: { intent_id: id, approval_proof } });
     if (res.status === "ok") {
-      op.result = res;
-      finishOp(id, "done", `Aprobado · ref. ${res.data?.operation_ref ?? ""}`);
+      op.result = res; op.state = "done";
       setBalance(res.data?.balance_minor, true);
-      state.localMoves.unshift({ operation_ref: res.data?.operation_ref, kind: op.kind, title: op.k.t(op.s), amount_minor: -(op.s.amount_minor || 0), state: "settled", created_at: Date.now() / 1000 });
+      if (op.kind === "topup") addPoints(50);
       haptic([10, 40, 10]); wink();
       showDone(op, res);
+      ctx.refreshCredit?.();
+      loadMovements().then(paintBell).catch(() => {});
     } else {
-      finishOp(id, "off", res.speech || "No se pudo completar");
       toast(res.speech || "No se pudo completar la operación");
     }
     if (source !== "agent") {
       if (wisiStarted) say(res.speech);
-      notifyAgent(`El usuario confirmó en la app. Resultado: ${res.speech}`);
+      // En voz, Wisi lo dice en alto; sin voz basta con avisarle para que tenga contexto.
+      if (mode === "voice") { lastTyped = `(La app confirma: ${res.speech})`; try { conv.sendUserMessage(lastTyped); } catch {} }
+      else notifyAgent(`El usuario confirmó en la app. Resultado: ${res.speech}`);
     }
     return res;
   } catch {
-    finishOp(id, "off", "Error al confirmar; no se movió dinero");
     toast("Algo falló al confirmar; no se movió dinero.");
     return { status: "error", speech: "Algo falló al confirmar; no se movió dinero." };
   } finally { sheetBusy = false; }
@@ -1014,11 +1089,14 @@ function scrollChat() { requestAnimationFrame(() => { chat.scrollTop = chat.scro
 function add(who, text) {
   if (!text) return null;
   hideThinking();
-  if (chat.querySelector(".hello")) { chat.querySelector(".hello").remove(); sweepFaces(); }
+  chat.querySelector(".hello")?.remove();
+  $("chips").hidden = true;
   const d = document.createElement("div");
-  d.className = "msg " + who;
+  // «bot» y no «wisi»: .wisi es la hoja entera y sacaba la burbuja de la vista.
+  d.className = "msg " + (who === "wisi" ? "bot" : who);
   d.textContent = text;
   chat.append(d);
+  $("wisi").classList.toggle("tall", chat.querySelectorAll(".msg").length > 5);
   scrollChat();
   if (who === "wisi") islandCaption("Wisi", text);
   if (who === "user") islandCaption("Tú", text);
@@ -1042,19 +1120,25 @@ function hideThinking() { if (!thinkRow) return; thinkRow.stop(); thinkRow.row.r
 function greet() {
   wisiStarted = true;
   chat.replaceChildren();
+  $("chips").hidden = false;
+  $("wisi").classList.remove("tall");
   const h = document.createElement("div");
   h.className = "hello";
-  h.innerHTML = '<div class="big js-hello-face"><img src="/assets/wisi_avatar.png" alt="" style="width:100%;height:100%" /></div><h2>¿Qué hacemos hoy?</h2><p>Escaneo tu ticket, pago tus servicios, dono o envío fondos. Tú confirmas con tu huella.</p>';
+  h.innerHTML = "<h2>¿Qué hacemos hoy?</h2><p>Pídemelo hablando o escribiendo. Tú confirmas con tu huella.</p>";
   chat.append(h);
-  setFace(h.querySelector(".js-hello-face"), "picando_ojo");
 }
 function setStatus(text, kind = "") { $("status").textContent = text; $("dot").className = "dot " + kind; }
 
 // ============================================================ agente ElevenLabs (voz y texto)
-let Conversation = null, conv = null, mode = null, live = false, starting = null, meter = 0, skipGreeting = false, lastTyped = null;
+let Conversation = null, conv = null, mode = null, live = false, starting = null, meter = 0, lastTyped = null;
+let voiceWanted = false, voiceRetries = 0, voiceSince = 0, replyTimer = 0, awaitingReply = null;
+const GREETING = /^¡Epa! Soy Wisi/;
+/** El agente dio señales de vida: cancela la respuesta de respaldo. */
+function agentAlive() { clearTimeout(replyTimer); awaitingReply = null; }
 async function loadSDK() {
   if (Conversation) return Conversation;
-  for (const url of ["https://esm.sh/@elevenlabs/client@0.7.1", "https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.7.1/+esm"]) {
+  // Copia propia primero: la voz no depende de que un CDN externo esté arriba.
+  for (const url of ["/assets/app/vendor/elevenlabs-client-0.7.1.js", "https://esm.sh/@elevenlabs/client@0.7.1", "https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.7.1/+esm"]) {
     try { ({ Conversation } = await import(url)); return Conversation; } catch {}
   }
   throw new Error("No se pudo cargar el motor de voz");
@@ -1067,11 +1151,22 @@ const SCREEN_MAP = {
   donaciones: () => { go("home"); push("donate"); },
   enviar_fondos: () => { go("home"); push("send"); },
   escaner_qr: () => scanFromUI(),
+  depositar: () => { go("home"); push("deposit"); },
+  credirecto: () => { go("home"); push("credit"); },
+  parquimetros: () => { go("home"); push("meter"); },
+  seguros: () => { go("home"); push("insurance"); },
+  boleteria: () => { go("home"); push("tickets"); },
+  notificaciones: () => { go("home"); push("notifs"); },
+  racha: () => { go("home"); push("streak"); },
+  mis_vehiculos: () => { go("home"); push("vehicles"); },
+  mis_cuentas: () => { go("home"); push("accounts"); },
+  asistencia: () => { go("home"); push("help"); },
 };
+const CATALOG_SCREEN = { parquimetros: "meter", seguros: "insurance", boleteria: "tickets" };
 const prep = (name) => async (p) => {
   const res = await callTool(name, p);
   if (res.status === "requires_confirmation") {
-    const op = registerOp(name, res);
+    const op = registerOp(name, res, p);
     driveApp();
     showOpInApp(op);
   }
@@ -1086,6 +1181,21 @@ const clientTools = {
   prepare_parking: prep("prepare_parking"),
   prepare_donation: prep("prepare_donation"),
   prepare_transfer: prep("prepare_transfer"),
+  prepare_purchase: prep("prepare_purchase"),
+  prepare_topup: prep("prepare_topup"),
+  prepare_credit: prep("prepare_credit"),
+  prepare_credit_payment: prep("prepare_credit_payment"),
+  list_catalog: async (p) => {
+    const res = await callTool("list_catalog", p);
+    const name = CATALOG_SCREEN[p?.section];
+    if (name && res.status === "ok") { driveApp(); go("home"); push(name, p?.type ? { type: p.type } : undefined); }
+    return JSON.stringify(res);
+  },
+  get_credit: async () => {
+    const res = await callTool("get_credit");
+    driveApp(); go("home"); push("credit");
+    return JSON.stringify(res);
+  },
   scan_parking_qr: async () => {
     driveApp();
     const r = await startScan();
@@ -1094,8 +1204,7 @@ const clientTools = {
   },
   list_movements: async () => {
     driveApp(); go("movs");
-    try { return JSON.stringify(await callTool("list_movements")); }
-    catch { return JSON.stringify({ status: "ok", data: { movements: state.localMoves }, speech: state.localMoves.length ? `Tienes ${state.localMoves.length} movimientos en esta sesión.` : "Aún no tienes movimientos." }); }
+    return JSON.stringify(await callTool("list_movements"));
   },
   get_operation_status: async (p) => JSON.stringify(await callTool("get_operation_status", p)),
   create_support_case: async (p) => { const r = await callTool("create_support_case", p); add("sys", `Caso abierto: ${r.data?.case_ref ?? ""}`); return JSON.stringify(r); },
@@ -1108,6 +1217,12 @@ const clientTools = {
   },
   confirm_payment_in_app: async (p) => JSON.stringify(await confirmOp(p?.intent_id, "agent")),
 };
+// Una tool nunca deja al agente sin respuesta: si la red falla, lo dice con calma.
+const safeTools = Object.fromEntries(Object.entries(clientTools).map(([name, fn]) => [name, async (p) => {
+  agentAlive();
+  try { return await fn(p); }
+  catch { return JSON.stringify({ status: "error", speech: "Hubo un problema de conexión y no se movió dinero. ¿Lo intentamos de nuevo?" }); }
+}]));
 function notifyAgent(text) { try { conv?.sendContextualUpdate(text); } catch {} }
 
 function setLive(on) {
@@ -1134,78 +1249,127 @@ function tickMeter() {
 }
 async function endConv() {
   const c = conv; conv = null; mode = null;
+  voiceWanted = false;
   try { await c?.endSession(); } catch {}
   setLive(false);
 }
+const withTimeout = (promise, ms, onLate) => {
+  let timer, expired = false;
+  promise.then((v) => { if (expired) onLate?.(v); }, () => {});
+  return Promise.race([promise, new Promise((_, ko) => { timer = setTimeout(() => { expired = true; ko(new Error("timeout")); }, ms); })]).finally(() => clearTimeout(timer));
+};
 async function openConv(want) {
   if (conv && mode === want) return conv;
   if (starting) { await starting.catch(() => {}); if (conv && mode === want) return conv; }
   starting = (async () => {
-    if (conv) await endConv();
-    if (want === "voice" && !navigator.mediaDevices?.getUserMedia)
-      throw new Error(location.protocol === "https:" || location.hostname === "localhost" ? "Tu navegador no permite el micrófono" : "El micrófono requiere HTTPS");
-    const [SDK, s] = await Promise.all([loadSDK(), newSession(true)]);
-    if (!s.signed_url) throw new Error("La voz no está disponible ahora mismo; usa el chat");
+    if (conv) { const keep = voiceWanted; await endConv(); voiceWanted = keep; }
     const text = want === "text";
-    skipGreeting = text;
-    const c = await SDK.startSession({
-      signedUrl: s.signed_url,
-      clientTools,
-      ...(text ? { textOnly: true, overrides: { conversation: { textOnly: true } } } : {}),
-      onConnect: () => { if (!text) { setLive(true); haptic(); } },
-      onDisconnect: () => { if (conv === c) { conv = null; mode = null; setLive(false); hideThinking(); } },
-      onError: (m) => { if (!text) add("err", "Error de voz: " + (m?.message || m)); },
+    const [SDK, s] = await Promise.all([loadSDK(), newSession(true, !text)]);
+    if (!s.signed_url && !s.conversation_token) throw new Error("La voz no está disponible ahora mismo; usa el chat");
+    let c = null;
+    const callbacks = {
+      clientTools: safeTools,
+      onConnect: () => { if (!text) { voiceSince = Date.now(); setLive(true); haptic(); } },
+      onDisconnect: (info) => {
+        if (c && conv !== c) return;
+        conv = null; mode = null; setLive(false); hideThinking();
+        if (!text) voiceDropped(info);
+      },
+      onError: (m) => { console.warn("wisi:", m); },
       onModeChange: ({ mode: m }) => {
         if (!live) return;
-        setStatus(m === "speaking" ? "Wisi está hablando…" : "Te escucho…", "live");
+        setStatus(m === "speaking" ? "Hablando…" : "Te escucho…", "live");
         playFace(m === "speaking" ? "pensando" : "neutral");
       },
       onMessage: ({ message, source }) => {
-        if (source === "user") { if (!text && message !== lastTyped) add("user", message); lastTyped = null; if (!text) showThinking(); return; }
-        if (skipGreeting) { skipGreeting = false; return; }
+        if (source === "user") {
+          if (!text && message !== lastTyped) { add("user", message); showThinking(); }
+          lastTyped = null;
+          return;
+        }
+        agentAlive();
+        if (text && GREETING.test(message)) return; // en chat no repetimos el saludo hablado
         say(message);
       },
-    });
+    };
+    const late = (x) => x?.endSession?.().catch?.(() => {});
+    if (text) {
+      c = await withTimeout(SDK.startSession({ signedUrl: s.signed_url, textOnly: true, overrides: { conversation: { textOnly: true } }, ...callbacks }), 10000, late);
+    } else {
+      // WebRTC da mejor audio y cancelación de eco; si la red lo bloquea, WebSocket.
+      try {
+        if (!s.conversation_token) throw new Error("sin token");
+        c = await withTimeout(SDK.startSession({ conversationToken: s.conversation_token, connectionType: "webrtc", ...callbacks }), 9000, late);
+      } catch (e) {
+        if (/Permission|NotAllowed|denied/i.test(String(e?.name || e?.message))) throw e;
+        if (!s.signed_url) throw e;
+        c = await withTimeout(SDK.startSession({ signedUrl: s.signed_url, connectionType: "websocket", ...callbacks }), 10000, late);
+      }
+    }
     conv = c; mode = want;
     return c;
   })();
   try { return await starting; } finally { starting = null; }
 }
-// Pide el micrófono en cuanto Wisi despierta: si el navegador aún no tiene
-// permiso, salta su aviso nativo y el usuario sabe por qué antes de conectar.
-async function ensureMic() {
-  if (!navigator.mediaDevices?.getUserMedia) return; // openConv explica el motivo
-  let state = "prompt";
-  try { state = (await navigator.permissions?.query({ name: "microphone" }))?.state ?? "prompt"; } catch {}
-  if (state === "granted") return;
-  if (state === "denied") throw new Error("mic-denied");
-  thinkRow?.set("mic");
-  toast("Wisi necesita tu micrófono: acepta el permiso del navegador", 6000);
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  stream.getTracks().forEach((t) => t.stop()); // el SDK abre su propio stream
-  toast("Micrófono listo");
-  thinkRow?.set("voice");
+/** Se cortó la voz sin que el usuario la terminara: reconecta sola, sin otro toque. */
+function voiceDropped(info) {
+  if (!voiceWanted) return;
+  if (info?.reason === "agent") { voiceWanted = false; return setStatus("Wisi cerró la llamada; toca el micrófono para seguir", "ok"); }
+  if (Date.now() - voiceSince > 20000) voiceRetries = 0;
+  if (voiceRetries >= 2) { voiceWanted = false; return add("err", "Se cortó la voz. Toca el micrófono para seguir o escríbeme."); }
+  voiceRetries++;
+  setStatus("Reconectando voz…");
+  setTimeout(() => { if (voiceWanted && !conv) startVoice(true); }, 700);
 }
-async function startVoice() {
-  if (live) return;
+let micBusy = false;
+async function startVoice(reconnecting = false) {
+  if (live || micBusy) return;
+  micBusy = true;
   const mic = $("btnMic");
   mic.classList.add("busy");
   setStatus("Conectando voz…");
   if (!wisiStarted) greet();
+  voiceWanted = true;
+  if (!reconnecting) voiceRetries = 0;
   showThinking(); thinkRow?.set("voice");
-  try { await ensureMic(); await openConv("voice"); hideThinking(); }
-  catch (e) {
+  // Pedimos el micrófono dentro del toque: es lo que iOS y Android exigen para
+  // no volver a preguntar ni arrancar el audio en silencio.
+  let preflight = null;
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error(location.protocol === "https:" || location.hostname === "localhost" ? "Tu navegador no permite el micrófono" : "El micrófono requiere HTTPS");
+    const ask = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    // Si el navegador va a mostrar su aviso, explicamos por qué antes de conectar.
+    let asked = false;
+    if (!reconnecting) navigator.permissions?.query({ name: "microphone" }).then((p) => {
+      if (p.state !== "prompt" || preflight) return;
+      asked = true;
+      thinkRow?.set("mic");
+      toast("Wisi necesita tu micrófono: acepta el permiso del navegador", 6000);
+    }).catch(() => {});
+    preflight = await ask;
+    if (asked) { toast("Micrófono listo"); thinkRow?.set("voice"); }
+    await openConv("voice");
     hideThinking();
-    const msg = e?.message === "mic-denied"
-      ? "El micrófono está bloqueado para esta página. Actívalo desde el candado de la barra de direcciones y vuelve a tocar el micrófono."
-      : /Permission|NotAllowed|denied/i.test(String(e?.name || e?.message || e)) ? "Permite el acceso al micrófono para hablar con Wisi." : (e?.message || String(e));
+    completeTask("wisi");
+  } catch (e) {
+    hideThinking();
+    voiceWanted = false;
+    const raw = String(e?.name || "") + " " + String(e?.message || e);
+    const msg = /Permission|NotAllowed|denied/i.test(raw) ? "Necesito permiso de micrófono: actívalo en el candado de la barra de direcciones y vuelve a tocar."
+      : /NotFound|DevicesNotFound/i.test(raw) ? "No encuentro un micrófono en este dispositivo. Puedes escribirme."
+      : /timeout|session|fetch|network/i.test(raw) ? "No pude conectar la voz. Revisa tu conexión o escríbeme: el chat funciona igual."
+      : (e?.message || raw);
     add("err", msg);
     setLive(false);
-  } finally { mic.classList.remove("busy"); }
+  } finally {
+    preflight?.getTracks().forEach((t) => t.stop());
+    micBusy = false;
+    mic.classList.remove("busy");
+  }
 }
 
 // --- enrutador local (sin agente) y atajos deterministas
-const SERVICES = { luz: "corpoelec", corpoelec: "corpoelec", electricidad: "corpoelec", digitel: "digitel", movistar: "movistar", movilnet: "movilnet", cantv: "cantv", internet: "cantv", condominio: "condominio" };
+const SERVICES = { luz: "corpoelec", corpoelec: "corpoelec", electricidad: "corpoelec", digitel: "digitel", movistar: "movistar", movilnet: "movilnet", cantv: "cantv", internet: "cantv", simpletv: "simpletv", "simple tv": "simpletv", inter: "inter", thundernet: "thundernet", tugruero: "tugruero", grua: "tugruero", dlm: "dlm", "global system": "globalsystem", starmoviles: "starmoviles", fibex: "fibex", condominio: "condominio" };
 const FOUND = { fundana: "fundana", senos: "senosayuda", alimentos: "banco_alimentos" };
 const amountOf = (t) => { const m = t.match(/(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:bs|bol)/i) || t.match(/\b(\d+(?:[.,]\d{1,2})?)\b/); return m ? parseBs(m[1]) : null; };
 const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -1223,12 +1387,31 @@ async function prepareLocal(name, params) {
   showThinking();
   const res = await callTool(name, params);
   say(res.speech);
-  if (res.status === "requires_confirmation") { const op = registerOp(name, res); driveApp(); showOpInApp(op); }
+  if (res.status === "requires_confirmation") { const op = registerOp(name, res, params); driveApp(); showOpInApp(op); }
 }
 async function handleLocal(text) {
   const t = norm(text);
   if (/saldo|cuanto tengo|balance/.test(t)) { showThinking(); const r = await refreshBalance(true); return say(r.speech); }
   if (/movimiento|historial|que he pagado/.test(t)) { driveApp(); go("movs"); showThinking(); const moves = await loadMovements(); return say(moves.length ? `Tienes ${moves.length} movimiento${moves.length > 1 ? "s" : ""}. El último: ${moves[0].title} por ${bs(Math.abs(moves[0].amount_minor))}.` : "Aún no tienes movimientos. ¿Escaneamos un ticket?"); }
+  const open = (screen, text) => { driveApp(); go("home"); push(screen); say(text); };
+  if (/credi|prestamo/.test(t)) {
+    const a = amountOf(t);
+    if (a && /pid|solicit|quiero|dame|presta|deposit/.test(t)) return prepareLocal("prepare_credit", { amount_minor: a });
+    showThinking();
+    const r = await callTool("get_credit");
+    return open("credit", r.speech);
+  }
+  if (/recarg|deposit|agrega.*saldo/.test(t)) {
+    const a = amountOf(t);
+    if (a) return prepareLocal("prepare_topup", { method: /banco de venezuela|bdv/.test(t) ? "bdv" : /humaniz/.test(t) ? "humaniz" : /nacional/.test(t) ? "cuentas_nacionales" : "pago_movil", amount_minor: a });
+    return open("deposit", "¿Cómo quieres recargar? Elige el método y el monto.");
+  }
+  if (/parquimetro/.test(t)) return open("meter", "Elige la zona, tu placa y las horas.");
+  if (/seguro|poliza|rcv/.test(t)) return open("insurance", "Estas son las pólizas disponibles.");
+  if (/boleto|boleteria|evento|entrada/.test(t)) return open("tickets", "Estos son los próximos eventos.");
+  if (/notificaci/.test(t)) return open("notifs", "Aquí están tus notificaciones.");
+  if (/racha/.test(t)) return open("streak", "Esta es tu racha de pagos.");
+  if (/vehiculo|placa/.test(t)) return open("vehicles", "Aquí gestionas tus vehículos.");
   if (/estacionamiento|parking|ticket/.test(t)) {
     const m = text.match(/(TCK-?[a-z0-9]{3,12})/i);
     if (m) return prepareLocal("prepare_parking", { ticket_ref: ticketFromQR(m[1]).ref });
@@ -1253,7 +1436,7 @@ async function handleLocal(text) {
   }
   if (/servicio|pagar|factura/.test(t)) { driveApp(); push("services"); showThinking(); return say((await callTool("list_services")).speech + " ¿Cuál pagamos?"); }
   if (/hola|buen|hey|epa/.test(t)) return say("¡Epa! ¿Qué hacemos hoy? Escaneo tu ticket, pago servicios, dono o envío fondos.");
-  say("Puedo escanear tu ticket de estacionamiento, pagar servicios (luz, Digitel, Movistar, CANTV…), donar o enviar fondos. Toca el micrófono para hablar conmigo.");
+  say("Puedo pagar tu estacionamiento, parquímetro y servicios, recargar tu wallet, pedir Credirecto, comprar seguros y boletos, donar o enviar fondos. ¿Qué necesitas?");
 }
 async function ask(text) {
   text = text.trim();
@@ -1262,22 +1445,27 @@ async function ask(text) {
   add("user", text);
   // El escaneo es una acción de la app: lo resolvemos aquí, siempre igual.
   if (isScan(norm(text))) return scanFromChat().catch(() => add("err", "No pude abrir el escáner."));
-  if (voiceEnabled) {
-    try {
-      showThinking();
-      const c = await openConv(mode === "voice" ? "voice" : "text");
-      lastTyped = text;
-      c.sendUserMessage(text);
-      return;
-    } catch { /* sin agente: resolvemos en local */ }
-  }
-  try { await handleLocal(text); }
-  catch { hideThinking(); add("err", "No pude conectar con PagoDirecto. Revisa tu conexión e inténtalo de nuevo."); }
+  completeTask("wisi");
+  const local = async () => {
+    try { await handleLocal(text); }
+    catch { hideThinking(); add("err", "No pude conectar con PagoDirecto. Revisa tu conexión e inténtalo de nuevo."); }
+  };
+  if (!voiceEnabled) return local();
+  showThinking();
+  try {
+    const c = await openConv(mode === "voice" ? "voice" : "text");
+    lastTyped = text;
+    // Si el agente se queda mudo, la app responde: Wisi nunca deja a nadie en visto.
+    awaitingReply = text;
+    clearTimeout(replyTimer);
+    replyTimer = setTimeout(() => { if (awaitingReply === text) { awaitingReply = null; local(); } }, 14000);
+    c.sendUserMessage(text);
+  } catch { agentAlive(); return local(); }
 }
 
 // ============================================================ eventos globales
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-go],[data-push],[data-wisi],[data-soon],[data-ask],[data-voice],[data-more],[data-close],[data-back]");
+  const t = e.target.closest("[data-go],[data-push],[data-wisi],[data-soon],[data-ask],[data-voice],[data-more],[data-close],[data-back],[data-task-go]");
   if (!t) return;
   const inSheet = t.closest(".sheet-wrap");
   if (inSheet && !t.matches("[data-more]")) closeSheet(inSheet.id);
@@ -1289,6 +1477,8 @@ document.addEventListener("click", (e) => {
     return push(t.dataset.push);
   }
   if (t.dataset.wisi !== undefined) return openWisi();
+  if (t.dataset.taskGo === "key") { haptic(20); toast("Llave de acceso activada"); return completeTask("key"); }
+  if (t.dataset.taskGo === "car") return push("vehicles");
   if (t.dataset.soon) return toast(`${t.dataset.soon} no está en esta demo. Prueba Estacionamiento, Servicios, Donaciones o Enviar.`);
   if (t.dataset.ask) { openWisi(); return ask(t.dataset.ask); }
   if (t.dataset.voice !== undefined) { openWisi(); return startVoice(); }
@@ -1312,43 +1502,95 @@ for (const g of $$("[data-voicesel]")) g.addEventListener("click", async (e) => 
   if (live) { await endConv(); add("sys", `Cambiando a la voz de ${who}…`); startVoice(); }
   else { if (conv) await endConv(); toast(`Voz de ${who} seleccionada`); }
 });
-$("btnMic").addEventListener("click", () => (live ? endConv() : startVoice()));
+// Un toque basta: mientras conecta, otro toque no cancela ni reinicia nada.
+$("btnMic").addEventListener("click", () => { if (micBusy) return; haptic(8); live ? endConv() : startVoice(); });
 $("dock").addEventListener("submit", (e) => { e.preventDefault(); const t = $("text").value; $("text").value = ""; $("compose").classList.remove("has"); ask(t); });
 $("text").addEventListener("input", () => $("compose").classList.toggle("has", $("text").value.trim().length > 0));
 $("chips").addEventListener("click", (e) => { const s = e.target.closest(".chip")?.dataset.say; if (s) { haptic(6); ask(s); } });
-$("btnReset").addEventListener("click", async () => { await endConv(); islandPinned = false; ops.clear(); greet(); paintIsland(); });
+$("btnReset").addEventListener("click", async () => { await endConv(); agentAlive(); islandPinned = false; ops.clear(); state.resume = null; greet(); paintIsland(); });
 $("btnResetDemo").addEventListener("click", async () => {
   await endConv();
   newPrincipal(); token = null;
-  ops.clear(); state.localMoves = []; islandPinned = false; tkCtx = null;
-  greet(); wisiStarted = false; paintIsland(); parkStep(0);
-  try { await newSession(false); await refreshBalance(true); toast(`Demo reiniciada: ${bs(state.balance)}`); }
+  for (const k of ["pd.bal", "pd.user", "pd.points", "pd.tasks", "pd.plates", "pd.accounts", "pd.seen"]) store.del(k);
+  ops.clear(); state.resume = null; state.credit = null; state.catalog = null; islandPinned = false; tkCtx = null;
+  greet(); wisiStarted = false; paintIsland(); parkStep(0); paintUser(); paintClub();
+  try { await newSession(false); await refreshBalance(true); await ctx.refreshCredit(); paintBell([]); toast(`Demo reiniciada: ${bs(state.balance)}`); }
   catch { toast("Sin conexión con PagoDirecto"); }
   go("home");
 });
+$("btnShare").addEventListener("click", () => ctx.share("Paga todo hablando con Wisi en PagoDirecto."));
 addEventListener("online", () => setStatus(voiceEnabled ? "En línea" : "Modo chat", "ok"));
 addEventListener("offline", () => { setStatus("Sin conexión", "err"); toast("Sin conexión a internet"); });
-document.addEventListener("visibilitychange", () => { if (document.hidden) { if (live) endConv(); if (scan) { stopScan(null); if (stack.at(-1) === "scan") pop(); } } });
+// Cambiar de app un momento no corta la llamada; solo si pasa más de un minuto.
+let hiddenT = 0;
+document.addEventListener("visibilitychange", () => {
+  clearTimeout(hiddenT);
+  if (!document.hidden) return;
+  if (live) hiddenT = setTimeout(() => { if (document.hidden && live) endConv(); }, 60000);
+  if (scan) { stopScan(null); if (stack.at(-1) === "scan") pop(); }
+});
+// Ningún error suelto deja la app colgada.
+addEventListener("unhandledrejection", (e) => { console.warn("wisi:", e.reason); hideThinking(); thinkFloat.hide(); });
+
+// ============================================================ Club, usuario y campana
+const TASK_PTS = { key: 250, car: 250, wisi: 100 };
+const user = () => store.get("pd.user", "@wisidemo");
+const points = () => Number(store.get("pd.points", "0")) || 0;
+function paintUser() { for (const el of $$(".js-user")) el.textContent = user(); }
+function addPoints(n) { store.set("pd.points", String(points() + n)); paintClub(); }
+function paintClub() {
+  for (const el of $$(".js-points")) el.textContent = `${points().toLocaleString("es-VE")} pts`;
+  const done = storeJSON.get("pd.tasks", []);
+  for (const card of $$("[data-task]")) {
+    const on = done.includes(card.dataset.task);
+    card.classList.toggle("done", on);
+    const b = card.querySelector("[data-task-go]");
+    if (b) { b.disabled = on; b.textContent = on ? "Completado" : "Completar"; }
+  }
+}
+function completeTask(k) {
+  const done = storeJSON.get("pd.tasks", []);
+  if (done.includes(k)) return;
+  storeJSON.set("pd.tasks", [...done, k]);
+  addPoints(TASK_PTS[k] ?? 0);
+  if (k !== "wisi") toast(`¡Ganaste ${TASK_PTS[k]} pts del Club!`);
+}
+function paintBell(moves) {
+  const seen = Number(store.get("pd.seen", "0")) || 0;
+  $("bell").classList.toggle("dot", (moves ?? []).some((m) => m.kind !== "welcome" && m.created_at > seen));
+}
+
+const ctx = {
+  $, $$, bs, fmt, parseBs, toast, store, storeJSON, push, pop, go, callTool, runPrepare, loadMovements, state, openWisi, haptic, when, makeThink,
+  confirmOp, scanFromUI, completeTask, user, points, paintUser,
+  cancelOp(id) { const op = ops.get(id); if (op) { op.state = "off"; notifyAgent(`El usuario canceló ${op.k.t(op.s)}.`); } },
+  paintBell: () => paintBell([]),
+};
+Object.assign(SCREENS, installFeatures(ctx));
 
 // ============================================================ arranque
-paintVoice(); paintEye(); demoTicketGrid();
+const cachedBal = Number(store.get("pd.bal", ""));
+if (store.get("pd.bal", "") !== "" && Number.isFinite(cachedBal)) setBalance(cachedBal);
+paintVoice(); paintEye(); demoTicketGrid(); paintUser(); paintClub();
 for (const s of $$(".screen")) if (!s.classList.contains("on")) s.inert = true;
 $("wisi").inert = true;
 addEventListener("load", () => {
   for (const el of $$(".js-face")) setFace(el, "neutral");
 });
-(async () => {
+async function boot(attempt = 0) {
   try {
     await newSession(false);
-    const [, svc, fnd] = await Promise.all([refreshBalance(), callTool("list_services"), callTool("list_foundations")]);
+    const [, svc, fnd, moves] = await Promise.all([refreshBalance(), callTool("list_services"), callTool("list_foundations"), loadMovements(), ctx.refreshCredit()]);
     state.services = svc.data?.services ?? [];
     state.foundations = fnd.data?.foundations ?? [];
-    paintHomeServices(); paintServiceGrid(); paintFoundations();
+    paintHomeServices(); paintServiceGrid(); paintFoundations(); paintBell(moves);
     setStatus(voiceEnabled ? "En línea" : "Modo chat", "ok");
     loadSDK().catch(() => {});
   } catch {
-    setStatus("Sin conexión con PagoDirecto", "err");
-    for (const el of $$(".js-bal")) el.textContent = "Sin conexión";
-    toast("No pudimos conectar con PagoDirecto. Recarga para reintentar.", 6000);
+    setStatus("Reconectando…", "err");
+    if (state.balance == null) for (const el of $$(".js-bal")) el.textContent = "Bs ···";
+    if (attempt === 2) toast("La conexión está lenta. Seguimos intentando…", 5000);
+    setTimeout(() => boot(attempt + 1), Math.min(15000, 1500 * 2 ** attempt));
   }
-})();
+}
+boot();
