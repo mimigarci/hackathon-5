@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#e6005c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Wisi" />
+<meta name="description" content="Wisi, el asistente de voz de PagoDirecto: paga servicios, estacionamiento, dona o envía fondos hablando." />
+<title>Wisi · PagoDirecto</title>
+<link rel="manifest" href="/assets/manifest.webmanifest" />
+<link rel="icon" type="image/png" href="/assets/logo_pd.png" />
+<link rel="apple-touch-icon" href="/assets/logo_pd.png" />
+<style>
+  :root{
+    --pd:#e6005c; --pd2:#ff3d84; --pd-soft:#ffe8f1; --pd-ink:#a3003f;
+    --ink:#101828; --ink2:#475467; --muted:#8a94a6;
+    --bg:#f6f7f9; --card:#ffffff; --line:#e7e9ee;
+    --ok:#12b76a; --ok-soft:#e7f8ef; --warn:#f79009; --err:#d92d20;
+    --r:18px; --shadow:0 6px 24px rgba(16,24,40,.08);
+    --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+  button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+  button:disabled{cursor:not-allowed;opacity:.45}
+  :focus-visible{outline:3px solid #e6005c55;outline-offset:2px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- layout ---------- */
+  .app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;background:var(--bg);position:relative}
+  @media (min-width:560px){
+    body{background:radial-gradient(1200px 600px at 50% -10%,#ffd9e8 0,#f6f7f9 60%)}
+    .app{height:min(100dvh,900px);margin:max(0px,calc((100dvh - 900px)/2)) auto;border-radius:28px;box-shadow:0 30px 80px rgba(16,24,40,.18);overflow:hidden}
+  }
+
+  /* ---------- header ---------- */
+  .top{display:flex;align-items:center;gap:10px;padding:calc(10px + var(--safe-t)) 16px 10px;background:var(--card);border-bottom:1px solid var(--line);flex:none}
+  .top .logo{height:20px;width:auto;display:block}
+  .top .sp{flex:1}
+  .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+  .seg button{padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--ink2);min-height:32px;transition:background .2s,color .2s}
+  .seg button[aria-pressed="true"]{background:var(--pd);color:#fff;box-shadow:0 2px 8px #e6005c44}
+  .iconbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--ink2)}
+  .iconbtn:active{background:var(--bg)}
+  .iconbtn svg{width:22px;height:22px}
+
+  /* ---------- hero / avatar ---------- */
+  .hero{flex:none;display:flex;flex-direction:column;align-items:center;padding:18px 16px 12px;gap:10px;transition:padding .3s}
+  .hero .who{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+  .avatar{position:relative;width:132px;height:132px;flex:none;transition:width .3s,height .3s}
+  .avatar .ring{position:absolute;inset:-10px;border-radius:50%;background:radial-gradient(circle,#ff3d8433 40%,#ff3d8400 70%);transform:scale(var(--lvl,1));transition:transform .08s linear,opacity .3s;opacity:0}
+  .avatar .face{position:absolute;inset:0;border-radius:50%;background:linear-gradient(140deg,#fff0f6,#ffd6e6);overflow:hidden;box-shadow:0 10px 30px #e6005c2e;display:grid;place-items:center}
+  .avatar .face img{width:78%;height:78%;object-fit:contain}
+  .avatar .face svg{display:block}
+  .app.live .avatar .ring{opacity:1}
+  .app.live .avatar .face{box-shadow:0 0 0 4px #fff,0 0 0 7px var(--pd),0 10px 30px #e6005c44}
+  .name{font-size:20px;font-weight:800;letter-spacing:-.01em}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);max-width:100%;min-width:0}
+  .status span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dot{flex:none}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .dot.ok{background:var(--ok)} .dot.live{background:var(--pd);animation:blink 1.2s infinite} .dot.err{background:var(--err)}
+  @keyframes blink{50%{opacity:.35}}
+
+  .balance{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:var(--r);color:#fff;background:linear-gradient(135deg,var(--pd),var(--pd2));box-shadow:0 10px 24px #e6005c33}
+  .balance .lbl{font-size:12px;opacity:.9;display:block}
+  .balance .amt{font-size:22px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .balance button{width:40px;height:40px;border-radius:12px;background:#ffffff26;display:grid;place-items:center;color:#fff}
+  .balance button svg{width:20px;height:20px}
+
+  /* compact mode once the chat has content */
+  .app.compact .hero{flex-direction:row;padding:10px 16px;gap:12px}
+  .app.compact .hero .who{align-items:flex-start;text-align:left;flex:1;min-width:0}
+  .app.compact .avatar{width:56px;height:56px}
+  .app.compact .avatar .ring{inset:-6px}
+  .app.compact .name{font-size:17px}
+  .app.compact .balance{width:auto;padding:8px 8px 8px 14px;border-radius:14px;box-shadow:0 6px 14px #e6005c2a}
+  .app.compact .balance .amt{font-size:16px}
+  .app.compact .balance .lbl{font-size:11px}
+  .app.compact .balance button{width:32px;height:32px;border-radius:10px}
+
+  /* ---------- chat ---------- */
+  .chat{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;overscroll-behavior:contain}
+  .msg{max-width:86%;padding:10px 14px;border-radius:18px;white-space:pre-wrap;word-wrap:break-word;animation:pop .2s ease-out}
+  .msg.user{align-self:flex-end;background:var(--pd);color:#fff;border-bottom-right-radius:6px}
+  .msg.wisi{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
+  .msg.sys{align-self:center;background:none;color:var(--muted);font-size:12.5px;padding:2px 8px;text-align:center}
+  .msg.err{align-self:center;background:#fef3f2;color:var(--err);font-size:13px;border-radius:12px}
+  .typing{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-radius:18px;border-bottom-left-radius:6px;padding:12px 14px;display:flex;gap:4px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-4px);opacity:1}}
+  @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+
+  .op{align-self:stretch;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);animation:pop .2s ease-out}
+  .op .row{display:flex;align-items:center;gap:12px}
+  .op .ic{width:40px;height:40px;border-radius:12px;background:var(--pd-soft);color:var(--pd);display:grid;place-items:center;flex:none;font-size:20px}
+  .op .t{font-weight:700} .op .s{font-size:13px;color:var(--ink2)}
+  .op .amt{margin-left:auto;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .op .acts{display:flex;gap:8px;margin-top:12px}
+  .op .acts button{flex:1;min-height:44px;border-radius:12px;font-weight:700}
+  .op .ghost{background:var(--bg);color:var(--ink2)}
+  .op .go{background:var(--pd);color:#fff}
+  .op .state{margin-top:10px;font-size:13px;font-weight:600}
+  .op.done{border-color:#abefc6;background:linear-gradient(0deg,var(--ok-soft),#fff)}
+  .op.done .ic{background:var(--ok);color:#fff}
+  .op.done .state{color:#067647}
+  .op.off{opacity:.65}
+  .op.off .state{color:var(--muted)}
+
+  /* ---------- quick actions ---------- */
+  .chips{flex:none;display:flex;gap:8px;overflow-x:auto;padding:4px 16px 8px;scrollbar-width:none;scroll-snap-type:x proximity}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;scroll-snap-align:start;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;min-height:40px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;transition:border-color .15s,transform .1s}
+  .chip:active{transform:scale(.97);border-color:var(--pd)}
+
+  /* ---------- dock ---------- */
+  .dock{flex:none;display:flex;align-items:flex-end;gap:10px;padding:8px 12px calc(10px + var(--safe-b));background:var(--card);border-top:1px solid var(--line)}
+  .field{flex:1;display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:24px;min-height:48px;padding:0 6px 0 16px;transition:border-color .15s}
+  .field:focus-within{border-color:var(--pd)}
+  .field input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);outline:none;padding:12px 0}
+  .field input::placeholder{color:var(--muted)}
+  .send{width:38px;height:38px;border-radius:50%;background:var(--pd);color:#fff;display:grid;place-items:center;transform:scale(0);transition:transform .15s}
+  .field.has .send{transform:scale(1)}
+  .send svg{width:18px;height:18px}
+  .mic{position:relative;width:52px;height:52px;flex:none;border-radius:50%;background:linear-gradient(135deg,var(--pd),var(--pd2));color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px #e6005c55;transition:transform .1s,background .2s}
+  .mic:active{transform:scale(.95)}
+  .mic svg{width:24px;height:24px}
+  .mic .stop{display:none}
+  .app.live .mic{background:var(--ink)}
+  .app.live .mic .go{display:none} .app.live .mic .stop{display:block}
+  .app.live .mic::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--pd);animation:ping 1.4s infinite}
+  .mic.busy svg{animation:spin 1s linear infinite}
+  @keyframes ping{from{transform:scale(.9);opacity:1}to{transform:scale(1.25);opacity:0}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .legal{font-size:11px;color:var(--muted);text-align:center;padding:0 16px 6px;background:var(--card)}
+
+  /* ---------- confirmation sheet ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{width:100%;max-width:520px;background:var(--card);border-radius:24px 24px 0 0;padding:10px 20px calc(20px + var(--safe-b));transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+  .scrim.open .sheet{transform:none}
+  .grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 14px}
+  .sheet h2{margin:0 0 4px;font-size:18px}
+  .sheet .sub{margin:0 0 16px;color:var(--ink2);font-size:14px}
+  .sheet dl{margin:0 0 18px;background:var(--bg);border-radius:14px;padding:4px 14px}
+  .sheet dl div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .sheet dl div:last-child{border-bottom:0}
+  .sheet dt{color:var(--ink2)} .sheet dd{margin:0;font-weight:600;text-align:right;word-break:break-word}
+  .sheet .big{font-size:28px;font-weight:800;text-align:center;margin:0 0 14px;font-variant-numeric:tabular-nums}
+  .finger{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:14px;border-radius:16px;background:var(--pd);color:#fff;font-weight:700;min-height:56px}
+  .finger svg{width:40px;height:40px}
+  .finger.scan svg{animation:scan .9s ease-in-out infinite}
+  @keyframes scan{50%{transform:scale(1.12);opacity:.7}}
+  .cancel{display:block;width:100%;margin-top:10px;padding:12px;border-radius:14px;color:var(--ink2);font-weight:600;min-height:48px}
+  .lock{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:12px;margin-top:6px}
+
+  .toast{position:fixed;left:50%;top:calc(14px + var(--safe-t));transform:translate(-50%,-150%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;transition:transform .25s;max-width:calc(100% - 32px);text-align:center}
+  .toast.show{transform:translate(-50%,0)}
+
+  @media (max-height:620px){
+    .hero{padding:10px 16px 6px}
+    .avatar{width:96px;height:96px}
+    .app.compact .avatar{width:48px;height:48px}
+    .legal{display:none}
+  }
+  @media (max-width:360px){
+    .top{gap:6px;padding-left:12px;padding-right:8px}
+    .top .logo{height:16px}
+    .seg button{padding:6px 9px;font-size:12.5px}
+    .iconbtn{width:36px}
+    .app.compact .balance .lbl{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <img class="logo" src="/assets/pagoDirecto.png" alt="PagoDirecto" />
+    <div class="sp"></div>
+    <div class="seg" role="group" aria-label="Voz de Wisi" id="voiceSel">
+      <button type="button" data-v="female" aria-pressed="true">Carito</button>
+      <button type="button" data-v="male" aria-pressed="false">Antonio</button>
+    </div>
+    <button type="button" class="iconbtn" id="btnReset" aria-label="Nueva conversación" title="Nueva conversación">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+    </button>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <div class="avatar">
+      <div class="ring"></div>
+      <div class="face" id="face"><img id="faceImg" src="/assets/wisi_avatar.gif" alt="Wisi" /></div>
+    </div>
+    <div class="who">
+      <div class="name">Wisi</div>
+      <div class="status"><span class="dot" id="dot"></span><span id="status">Conectando…</span></div>
+    </div>
+    <div class="balance">
+      <div><span class="lbl">Saldo disponible</span><span class="amt" id="bal">—</span></div>
+      <button type="button" id="btnBal" aria-label="Actualizar saldo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <main class="chat" id="chat" aria-live="polite" aria-label="Conversación con Wisi"></main>
+
+  <nav class="chips" id="chips" aria-label="Acciones rápidas">
+    <button type="button" class="chip" data-say="¿Cuál es mi saldo?">💰 Saldo</button>
+    <button type="button" class="chip" data-say="Quiero pagar la luz">💡 Pagar luz</button>
+    <button type="button" class="chip" data-say="Quiero pagar mi ticket de estacionamiento">🅿️ Estacionamiento</button>
+    <button type="button" class="chip" data-say="Quiero enviar 250 bolívares a @maria">📤 Enviar fondos</button>
+    <button type="button" class="chip" data-say="Quiero donar 50 bolívares a Fundana">❤️ Donar</button>
+    <button type="button" class="chip" data-say="¿Qué servicios puedo pagar?">🧾 Servicios</button>
+  </nav>
+
+  <form class="dock" id="dock" autocomplete="off">
+    <label class="field" id="field">
+      <span class="sr">Mensaje para Wisi</span>
+      <input id="text" type="text" inputmode="text" enterkeyhint="send" placeholder="Escribe o toca el micrófono…" maxlength="400" />
+      <button type="submit" class="send" id="btnSend" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </label>
+    <button type="button" class="mic" id="btnMic" aria-label="Hablar con Wisi">
+      <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+      <svg class="stop" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+    </button>
+  </form>
+  <div class="legal">Wisi nunca mueve dinero sin tu confirmación biométrica · Demo con saldo simulado</div>
+</div>
+
+<div class="scrim" id="scrim" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="grab"></div>
+    <h2 id="shTitle">Confirma tu operación</h2>
+    <p class="sub" id="shSub">Revisa los datos antes de aprobar.</p>
+    <p class="big" id="shAmt">Bs 0,00</p>
+    <dl id="shList"></dl>
+    <button type="button" class="finger" id="shOk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 7.6A5 5 0 0 1 17 11v1.5"/><path d="M7 11a5 5 0 0 1 .3-1.7"/><path d="M16.8 16.5c-.3 1.3-.8 2.5-1.5 3.5"/><path d="M9 11a3 3 0 0 1 6 0v2a10 10 0 0 1-.9 4"/><path d="M5.2 15.5A11 11 0 0 0 7 11a5 5 0 0 1 0 0"/><path d="M4 7a9 9 0 0 1 15.6 1.5"/></svg>
+      <span id="shOkTxt">Confirmar con huella</span>
+    </button>
+    <button type="button" class="cancel" id="shNo">Cancelar</button>
+    <div class="lock">🔒 Aprobación segura de PagoDirecto</div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+<script type="module">
+const GW = location.origin;
+const $ = (id) => document.getElementById(id);
+const app = $("app"), chat = $("chat"), face = $("face"), input = $("text");
+
+// ---------- utilidades ----------------------------------------------------
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const bs = (m) => "Bs " + (Number(m) / 100).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const haptic = (p = 12) => { try { navigator.vibrate?.(p); } catch {} };
+
+let toastT;
+function toast(t) {
+  const el = $("toast"); el.textContent = t; el.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 3200);
+}
+function setStatus(text, kind = "") {
+  $("status").textContent = text;
+  $("dot").className = "dot " + kind;
+}
+function scrollDown() { requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; }); }
+function add(who, text) {
+  if (!text) return;
+  hideTyping();
+  const d = document.createElement("div");
+  d.className = "msg " + who; d.textContent = text;
+  chat.appendChild(d); compact(); scrollDown();
+  return d;
+}
+let typingEl = null;
+function showTyping() {
+  if (typingEl) return;
+  typingEl = document.createElement("div");
+  typingEl.className = "typing"; typingEl.setAttribute("aria-label", "Wisi está escribiendo");
+  typingEl.innerHTML = "<i></i><i></i><i></i>";
+  chat.appendChild(typingEl); scrollDown();
+}
+function hideTyping() { typingEl?.remove(); typingEl = null; }
+const shortScreen = matchMedia("(max-height: 640px)");
+function compact() { app.classList.toggle("compact", chat.childElementCount > 1 || shortScreen.matches); }
+shortScreen.addEventListener?.("change", compact);
+
+// ---------- avatar Lottie (mismas animaciones que la app) -----------------
+const animCache = {};
+let anim = null, animName = null;
+async function playFace(name) {
+  if (animName === name || !window.lottie) return;
+  animName = name;
+  try {
+    animCache[name] ??= fetch(`/assets/wisi_${name}.json`).then((r) => r.json());
+    const data = await animCache[name];
+    if (animName !== name) return;
+    anim?.destroy();
+    $("faceImg")?.remove();
+    anim = lottie.loadAnimation({ container: face, renderer: "svg", loop: true, autoplay: true, animationData: data });
+  } catch { /* se queda el GIF */ }
+}
+function wink() { playFace("picando_ojo"); setTimeout(() => { if (animName === "picando_ojo") playFace("neutral"); }, 2600); }
+
+// ---------- sesión con el gateway ---------------------------------------
+let principal = store.get("wisi.pid", null);
+if (!principal) { principal = "web-" + crypto.getRandomValues(new Uint32Array(2)).join("").slice(0, 12); store.set("wisi.pid", principal); }
+let voice = store.get("wisi.voice", "female");
+let token = null, voiceEnabled = false;
+
+async function newSession(signed = true) {
+  const r = await fetch(`${GW}/api/session?principal=${encodeURIComponent(principal)}&voice=${voice}&signed=${signed}`, { method: "POST" });
+  if (!r.ok) throw new Error("session " + r.status);
+  const s = await r.json();
+  token = s.session_token; voiceEnabled = !!s.voice_enabled;
+  return s;
+}
+async function api(path, { body, method = "POST", retried = false } = {}) {
+  if (!token) await newSession(false);
+  const r = await fetch(`${GW}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401 && !retried) { token = null; return api(path, { body, method, retried: true }); }
+  if (!r.ok) throw new Error(`${path} ${r.status}`);
+  return r.json();
+}
+async function callTool(name, params = {}) {
+  if (!live) playFace("pensando");
+  try { return await api(`/api/tool/${name}`, { body: params }); }
+  finally { if (!live) playFace("neutral"); }
+}
+async function refreshBalance() {
+  const r = await callTool("get_balance");
+  if (r.data?.balance_minor != null) $("bal").textContent = bs(r.data.balance_minor);
+  return r;
+}
+
+// ---------- operaciones (preparar → confirmar) --------------------------
+const ops = new Map(); // intent_id -> {summary, kind, card, state, resolve}
+const KIND = {
+  prepare_payment: { ic: "🧾", t: (s) => `Pago ${s.service ?? "servicio"}`, sub: (s) => s.account_number ? `Cuenta ${s.account_number}` : "" },
+  prepare_parking: { ic: "🅿️", t: () => "Estacionamiento", sub: (s) => `Ticket ${s.ticket_ref ?? ""}` },
+  prepare_donation: { ic: "❤️", t: (s) => `Donación a ${s.foundation ?? ""}`, sub: () => "Aporte solidario" },
+  prepare_transfer: { ic: "📤", t: (s) => `Envío a ${s.recipient_ref ?? ""}`, sub: () => "Transferencia PagoDirecto" },
+};
+function registerOp(tool, res) {
+  const id = res.data?.intent_id; if (!id || ops.has(id)) return ops.get(id);
+  const s = res.data.summary || {};
+  const k = KIND[tool] || { ic: "💳", t: () => "Operación", sub: () => "" };
+  const op = { id, s, k, state: "pending" };
+  const card = document.createElement("div");
+  card.className = "op";
+  card.innerHTML = `<div class="row"><div class="ic"></div><div style="min-width:0"><div class="t"></div><div class="s"></div></div><div class="amt"></div></div>
+    <div class="acts"><button type="button" class="ghost">Cancelar</button><button type="button" class="go">Confirmar</button></div><div class="state" hidden></div>`;
+  card.querySelector(".ic").textContent = k.ic;
+  card.querySelector(".t").textContent = k.t(s);
+  card.querySelector(".s").textContent = k.sub(s);
+  card.querySelector(".amt").textContent = s.amount_minor != null ? bs(s.amount_minor) : "";
+  card.querySelector(".go").onclick = () => confirmOp(id, "card");
+  card.querySelector(".ghost").onclick = () => finishOp(id, "off", "Operación cancelada");
+  op.card = card; ops.set(id, op);
+  hideTyping(); chat.appendChild(card); compact(); scrollDown();
+  return op;
+}
+function finishOp(id, cls, text) {
+  const op = ops.get(id); if (!op) return;
+  op.state = cls;
+  op.card.classList.add(cls);
+  op.card.querySelector(".acts")?.remove();
+  const st = op.card.querySelector(".state"); st.hidden = false; st.textContent = text;
+  if (cls === "done") op.card.querySelector(".ic").textContent = "✓";
+}
+
+// Hoja de confirmación: simula biometría/PIN. Devuelve el ToolResponse o null.
+let sheetBusy = false;
+function askApproval(op) {
+  return new Promise((resolve) => {
+    const scrim = $("scrim"), ok = $("shOk"), no = $("shNo");
+    $("shAmt").textContent = op.s.amount_minor != null ? bs(op.s.amount_minor) : "";
+    $("shSub").textContent = op.k.t(op.s);
+    const dl = $("shList"); dl.replaceChildren();
+    const rows = [["Concepto", op.k.t(op.s)], ...(op.k.sub(op.s) ? [["Detalle", op.k.sub(op.s)]] : []), ["Comisión", "Bs 0,00"], ["Desde", "Wallet PagoDirecto"]];
+    for (const [a, b] of rows) { const d = document.createElement("div"); const dt = document.createElement("dt"); const dd = document.createElement("dd"); dt.textContent = a; dd.textContent = b; d.append(dt, dd); dl.append(d); }
+    ok.classList.remove("scan"); ok.disabled = false; $("shOkTxt").textContent = "Confirmar con huella";
+    scrim.classList.add("open"); scrim.setAttribute("aria-hidden", "false");
+    setTimeout(() => ok.focus(), 250);
+    const close = (v) => {
+      scrim.classList.remove("open"); scrim.setAttribute("aria-hidden", "true");
+      ok.onclick = no.onclick = scrim.onclick = null; document.removeEventListener("keydown", esc);
+      resolve(v);
+    };
+    const esc = (e) => { if (e.key === "Escape") close(false); };
+    document.addEventListener("keydown", esc);
+    no.onclick = () => close(false);
+    scrim.onclick = (e) => { if (e.target === scrim) close(false); };
+    ok.onclick = async () => {
+      ok.disabled = true; ok.classList.add("scan"); $("shOkTxt").textContent = "Verificando…"; haptic(20);
+      await sleep(900);
+      close(true);
+    };
+  });
+}
+async function confirmOp(id, source) {
+  const op = ops.get(id);
+  if (!op) return { status: "error", speech: "No encuentro esa operación." };
+  if (op.state === "done") return op.result;
+  if (op.state === "off") return { status: "denied", speech: "El usuario canceló la operación." };
+  if (sheetBusy) return { status: "denied", speech: "Ya hay una confirmación en curso." };
+  sheetBusy = true;
+  try {
+    const approved = await askApproval(op);
+    if (!approved) {
+      finishOp(id, "off", "Confirmación cancelada");
+      if (source !== "agent") notifyAgent(`El usuario canceló la confirmación de ${op.k.t(op.s)}.`);
+      return { status: "denied", speech: "El usuario canceló la confirmación." };
+    }
+    const { approval_proof } = await api(`/api/approval-proof?intent_id=${encodeURIComponent(id)}`);
+    const res = await api("/api/confirm", { body: { intent_id: id, approval_proof } });
+    if (res.status === "ok") {
+      op.result = res;
+      finishOp(id, "done", `Aprobado · ref. ${res.data?.operation_ref ?? ""}`);
+      if (res.data?.balance_minor != null) $("bal").textContent = bs(res.data.balance_minor);
+      haptic([10, 40, 10]); wink();
+    } else {
+      finishOp(id, "off", res.speech || "No se pudo completar");
+    }
+    if (source !== "agent") { add("wisi", res.speech); notifyAgent(`El usuario confirmó en la app. Resultado: ${res.speech}`); }
+    return res;
+  } catch (e) {
+    finishOp(id, "off", "Error al confirmar; no se movió dinero");
+    return { status: "error", speech: "Algo falló al confirmar; no se movió dinero." };
+  } finally { sheetBusy = false; }
+}
+
+// ---------- agente ElevenLabs (voz y texto) -----------------------------
+// Un único agente para todo: en voz abre el micrófono; en texto abre una
+// sesión textOnly con las mismas client tools. Si no hay agente, enrutador local.
+let Conversation = null, conv = null, mode = null, live = false, starting = null, meter = 0, skipGreeting = false, lastTyped = null;
+async function loadSDK() {
+  if (Conversation) return Conversation;
+  for (const url of ["https://esm.sh/@elevenlabs/client@0.7.1", "https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.7.1/+esm"]) {
+    try { ({ Conversation } = await import(url)); return Conversation; } catch {}
+  }
+  throw new Error("No se pudo cargar el motor de voz");
+}
+const prep = (name) => async (p) => {
+  const res = await callTool(name, p);
+  if (res.status === "requires_confirmation") registerOp(name, res);
+  return JSON.stringify(res);
+};
+const clientTools = {
+  get_balance: async () => JSON.stringify(await refreshBalance()),
+  list_services: async (p) => JSON.stringify(await callTool("list_services", p)),
+  explain_service: async (p) => JSON.stringify(await callTool("explain_service", p)),
+  list_foundations: async () => JSON.stringify(await callTool("list_foundations")),
+  prepare_payment: prep("prepare_payment"),
+  prepare_parking: prep("prepare_parking"),
+  prepare_donation: prep("prepare_donation"),
+  prepare_transfer: prep("prepare_transfer"),
+  get_operation_status: async (p) => JSON.stringify(await callTool("get_operation_status", p)),
+  create_support_case: async (p) => { const r = await callTool("create_support_case", p); add("sys", `Caso abierto: ${r.data?.case_ref ?? ""}`); return JSON.stringify(r); },
+  open_app_screen: async (p) => { add("sys", `→ Abriendo ${String(p?.screen_key ?? "").replace(/_/g, " ")}`); return JSON.stringify(await callTool("open_app_screen", p)); },
+  confirm_payment_in_app: async (p) => JSON.stringify(await confirmOp(p?.intent_id, "agent")),
+};
+function notifyAgent(text) { try { conv?.sendContextualUpdate(text); } catch {} }
+
+function setLive(on) {
+  live = on; app.classList.toggle("live", on);
+  $("btnMic").setAttribute("aria-label", on ? "Terminar conversación de voz" : "Hablar con Wisi");
+  if (on) { setStatus("Te escucho…", "live"); tickMeter(); }
+  else { cancelAnimationFrame(meter); face.parentElement.style.setProperty("--lvl", 1); setStatus(voiceEnabled ? "En línea" : "Modo chat", "ok"); playFace("neutral"); }
+}
+function tickMeter() {
+  if (!live || !conv) return;
+  let v = 0;
+  try { v = Math.max(conv.getOutputVolume?.() ?? 0, (conv.getInputVolume?.() ?? 0) * 0.8); } catch {}
+  face.parentElement.style.setProperty("--lvl", (1 + Math.min(v, 1) * 0.35).toFixed(3));
+  meter = requestAnimationFrame(tickMeter);
+}
+async function endConv() {
+  const c = conv; conv = null; mode = null;
+  try { await c?.endSession(); } catch {}
+  setLive(false);
+}
+// Abre una sesión con el agente en el modo pedido (reutiliza si ya existe).
+async function openConv(want) {
+  if (conv && mode === want) return conv;
+  if (starting) { await starting.catch(() => {}); if (conv && mode === want) return conv; }
+  starting = (async () => {
+    if (conv) await endConv();
+    if (want === "voice" && !navigator.mediaDevices?.getUserMedia)
+      throw new Error(location.protocol === "https:" || location.hostname === "localhost" ? "Tu navegador no permite el micrófono" : "El micrófono requiere HTTPS");
+    const [SDK, s] = await Promise.all([loadSDK(), newSession(true)]);
+    if (!s.signed_url) throw new Error("La voz no está disponible ahora mismo; usa el chat");
+    const text = want === "text";
+    skipGreeting = text; // en texto ya saludamos nosotros
+    const c = await SDK.startSession({
+      signedUrl: s.signed_url,
+      clientTools,
+      ...(text ? { textOnly: true, overrides: { conversation: { textOnly: true } } } : {}),
+      onConnect: () => { if (!text) { setLive(true); haptic(); } },
+      onDisconnect: () => { if (conv === c) { conv = null; mode = null; setLive(false); hideTyping(); } },
+      onError: (m) => { if (!text) add("err", "Error de voz: " + (m?.message || m)); },
+      onModeChange: ({ mode: m }) => {
+        if (!live) return;
+        setStatus(m === "speaking" ? "Wisi está hablando…" : "Te escucho…", "live");
+        playFace(m === "speaking" ? "pensando" : "neutral");
+      },
+      onMessage: ({ message, source }) => {
+        if (source === "user") { if (!text && message !== lastTyped) add("user", message); lastTyped = null; return; }
+        if (skipGreeting) { skipGreeting = false; return; }
+        add("wisi", message);
+      },
+    });
+    conv = c; mode = want;
+    return c;
+  })();
+  try { return await starting; } finally { starting = null; }
+}
+async function startVoice() {
+  if (live) return;
+  $("btnMic").classList.add("busy"); setStatus("Conectando voz…", "");
+  try { await openConv("voice"); }
+  catch (e) {
+    const msg = /Permission|NotAllowed|denied/i.test(String(e?.name || e?.message || e)) ? "Permite el acceso al micrófono para hablar con Wisi" : (e?.message || String(e));
+    add("err", msg); setLive(false);
+  } finally { $("btnMic").classList.remove("busy"); }
+}
+
+// ---------- modo texto: enruta al agente si hay voz, si no resuelve local
+const SERVICES = { luz: "corpoelec", corpoelec: "corpoelec", electricidad: "corpoelec", digitel: "digitel", movistar: "movistar", movilnet: "movilnet", cantv: "cantv", internet: "cantv", condominio: "condominio" };
+const FOUND = { fundana: "fundana", senos: "senosayuda", alimentos: "banco_alimentos" };
+const amountOf = (t) => { const m = t.match(/(\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:bs|bol)/i) || t.match(/\b(\d+(?:[.,]\d{1,2})?)\b/); if (!m) return null; const n = parseFloat(m[1].replace(/[.\s](?=\d{3}\b)/g, "").replace(",", ".")); return isFinite(n) && n > 0 ? Math.round(n * 100) : null; };
+
+async function prepareLocal(name, params) {
+  showTyping();
+  const res = await callTool(name, params);
+  add("wisi", res.speech);
+  if (res.status === "requires_confirmation") registerOp(name, res);
+}
+async function handleLocal(text) {
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/saldo|cuanto tengo|balance/.test(t)) { showTyping(); const r = await refreshBalance(); return add("wisi", r.speech); }
+  if (/estacionamiento|parking|ticket/.test(t)) { const m = text.match(/ticket[-\s]*([a-z0-9-]{3,})/i); return prepareLocal("prepare_parking", { ticket_ref: m ? m[1].toUpperCase() : "TICKET-ABC-123" }); }
+  if (/don(a|ar|aci)/.test(t)) {
+    const key = Object.keys(FOUND).find((k) => t.includes(k));
+    if (!key && !/\d/.test(t)) { showTyping(); return add("wisi", (await callTool("list_foundations")).speech + " ¿A cuál y cuánto?"); }
+    return prepareLocal("prepare_donation", { foundation_ref: FOUND[key] || "fundana", amount_minor: amountOf(t) ?? 5000 });
+  }
+  if (/envi|transfer|mand/.test(t)) {
+    const who = text.match(/@[\w.]+/)?.[0] || text.match(/\ba\s+([A-ZÁÉÍÓÚÑ][\wáéíóúñ]+)/)?.[1];
+    const amt = amountOf(t);
+    if (!who || !amt) return add("wisi", "¿A quién y cuánto quieres enviar? Por ejemplo: «envía 100 Bs a @maria».");
+    return prepareLocal("prepare_transfer", { recipient_ref: who, amount_minor: amt, kind: "p2p" });
+  }
+  const svc = Object.keys(SERVICES).find((k) => t.includes(k));
+  if (svc) {
+    const acct = text.match(/\b\d{4}[-\s]?\d{3,}\b/)?.[0] || "0001-2345";
+    return prepareLocal("prepare_payment", { service_ref: SERVICES[svc], account_number: acct, amount_minor: /\d+\s*(bs|bol)/i.test(t) ? amountOf(t) : null });
+  }
+  if (/servicio|pagar|factura/.test(t)) { showTyping(); return add("wisi", (await callTool("list_services")).speech + " ¿Cuál pagamos?"); }
+  if (/hola|buen|hey/.test(t)) return add("wisi", "¡Hola! ¿Qué hacemos hoy? Puedo consultar tu saldo, pagar servicios o estacionamiento, donar o enviar fondos.");
+  add("wisi", "Puedo ayudarte con tu saldo, pagar servicios (luz, Digitel, Movistar, CANTV…), estacionamiento, donar o enviar fondos. Toca el micrófono para hablar conmigo.");
+}
+async function ask(text) {
+  text = text.trim(); if (!text) return;
+  add("user", text);
+  if (voiceEnabled) {
+    try {
+      showTyping();
+      const c = await openConv(mode === "voice" ? "voice" : "text");
+      lastTyped = text; c.sendUserMessage(text);
+      setTimeout(hideTyping, 15000);
+      return;
+    } catch { /* sin agente: resolvemos en local */ }
+  }
+  try { await handleLocal(text); }
+  catch { hideTyping(); add("err", "No pude conectar con PagoDirecto. Revisa tu conexión e inténtalo de nuevo."); }
+}
+
+// ---------- eventos -----------------------------------------------------
+function paintVoice() { for (const b of document.querySelectorAll("#voiceSel button")) b.setAttribute("aria-pressed", String(b.dataset.v === voice)); }
+$("voiceSel").addEventListener("click", async (e) => {
+  const v = e.target.closest("button")?.dataset.v; if (!v || v === voice) return;
+  voice = v; store.set("wisi.voice", v); paintVoice(); haptic();
+  const who = v === "female" ? "Carito" : "Antonio";
+  if (live) { await endConv(); add("sys", `Cambiando a la voz de ${who}…`); startVoice(); }
+  else { if (conv) await endConv(); toast(`Voz de ${who} seleccionada`); }
+});
+$("btnMic").addEventListener("click", () => (live ? endConv() : startVoice()));
+$("dock").addEventListener("submit", (e) => { e.preventDefault(); const t = input.value; input.value = ""; $("field").classList.remove("has"); ask(t); });
+input.addEventListener("input", () => $("field").classList.toggle("has", input.value.trim().length > 0));
+$("chips").addEventListener("click", (e) => { const s = e.target.closest(".chip")?.dataset.say; if (s) { haptic(); ask(s); } });
+$("btnBal").addEventListener("click", async () => { haptic(); try { await refreshBalance(); toast("Saldo actualizado"); } catch { toast("Sin conexión"); } });
+$("btnReset").addEventListener("click", async () => { await endConv(); chat.replaceChildren(); ops.clear(); greet(); });
+window.addEventListener("online", () => setStatus("En línea", "ok"));
+window.addEventListener("offline", () => setStatus("Sin conexión", "err"));
+document.addEventListener("visibilitychange", () => { if (document.hidden && live) endConv(); });
+
+function greet() { add("wisi", "¡Hola! Soy Wisi 👋 Puedo pagar tus servicios, tu estacionamiento, donar o enviar fondos. Háblame con el micrófono o escríbeme."); app.classList.remove("compact"); compact(); }
+
+// ---------- arranque ----------------------------------------------------
+paintVoice(); greet();
+window.addEventListener("load", () => playFace("neutral"));
+(async () => {
+  try {
+    await newSession(false); await refreshBalance();
+    setStatus(voiceEnabled ? "En línea" : "Modo chat", "ok");
+    loadSDK().catch(() => {});
+  } catch {
+    setStatus("Sin conexión con PagoDirecto", "err");
+  }
+})();
+</script>
+</body>
+</html>

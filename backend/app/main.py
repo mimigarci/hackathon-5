@@ -11,13 +11,14 @@ que envía el modelo.
 """
 from __future__ import annotations
 
+import time
+from collections import defaultdict, deque
+from pathlib import Path
 from typing import Any
 
-from pathlib import Path
-
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import tools
@@ -84,9 +85,11 @@ _STATIC = Path(__file__).parent / "static"
 app.mount("/assets", StaticFiles(directory=_STATIC / "assets"), name="assets")
 
 
-@app.get("/")
-def root() -> RedirectResponse:
-    return RedirectResponse(url="/demo")
+@app.get("/", include_in_schema=False)
+@app.get("/app", include_in_schema=False)
+def webapp() -> FileResponse:
+    """Webapp móvil de Wisi (voz + chat + confirmación biométrica simulada)."""
+    return FileResponse(_STATIC / "app.html", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/demo", include_in_schema=False)
@@ -100,25 +103,56 @@ def health() -> dict[str, Any]:
     return {"status": "ok", "mode": settings.mode}
 
 
+_SIGNED_HITS: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    # Detrás de Cloudflare la IP real llega en CF-Connecting-IP.
+    return (
+        request.headers.get("cf-connecting-ip")
+        or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or (request.client.host if request.client else "unknown")
+    )
+
+
+def _allow_signed(ip: str) -> bool:
+    """Ventana deslizante de 10 min por IP para las sesiones de voz."""
+    now, hits = time.monotonic(), _SIGNED_HITS[ip]
+    while hits and now - hits[0] > 600:
+        hits.popleft()
+    if len(hits) >= settings.signed_per_ip_10min:
+        return False
+    hits.append(now)
+    return True
+
+
 @app.post("/api/session")
 async def create_session(
-    principal: str = "demo-user", voice: str = "female"
+    request: Request,
+    principal: str = "demo-user",
+    voice: str = "female",
+    signed: bool = True,
 ) -> dict[str, Any]:
     """Emite el token de sesión efímero y los datos de voz del agente.
 
     `voice` ∈ {female, male} elige el agente (voz venezolana femenina / latino
     masculina). En producción, `principal` sale de la sesión autenticada de la
     app. Devuelve una `signed_url` de ElevenLabs para no exponer el agent_id.
+    Con `signed=false` no la pide (arranque rápido; la URL es de un solo uso y
+    el cliente la solicita justo antes de abrir el micrófono).
     """
     agent_id = _agent_for_voice(voice)
-    signed_url = await _elevenlabs_signed_url(agent_id)
+    if signed and not _allow_signed(_client_ip(request)):
+        signed = False
+        agent_id = ""  # límite alcanzado: solo chat hasta que pase la ventana
+    signed_url = await _elevenlabs_signed_url(agent_id) if signed else None
     return {
         "session_token": issue_session_token(principal),
         "principal": principal,
         "voice": voice,
         "elevenlabs_agent_id": agent_id or "<set ELEVENLABS_AGENT_ID>",
         "signed_url": signed_url,
-        "voice_enabled": bool(signed_url),
+        "voice_enabled": bool(signed_url) if signed else bool(settings.elevenlabs_api_key and agent_id),
     }
 
 

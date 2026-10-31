@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8765", "--directory", "app/build/web"],
       "port": 8765
+    },
+    {
+      "name": "wisi-gateway",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd backend && .venv/bin/uvicorn app.main:app --port 8001 --reload"],
+      "port": 8001
     }
   ]
 }

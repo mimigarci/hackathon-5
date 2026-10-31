@@ -36,6 +36,10 @@ class Settings:
     # Clave compartida que ElevenLabs envía en cada llamada a las webhook tools.
     tool_webhook_secret: str = os.getenv("WISIVOZ_TOOL_SECRET", "dev-tool-secret")
 
+    # Máximo de sesiones de voz (signed URLs de ElevenLabs) por IP cada 10 min.
+    # Protege los créditos de ElevenLabs cuando la webapp es pública.
+    signed_per_ip_10min: int = int(os.getenv("WISIVOZ_SIGNED_PER_IP_10MIN", "30"))
+
     # Vigencia de una intención de pago/transferencia, en segundos.
     intent_ttl_seconds: int = int(os.getenv("WISIVOZ_INTENT_TTL", "180"))
 
