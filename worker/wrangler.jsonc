@@ -1,0 +1,30 @@
+// Wisi en Cloudflare Workers (plan gratuito): webapp estática + gateway WisiVoz.
+// Secretos (no van al repo): ELEVENLABS_API_KEY, WISIVOZ_SESSION_SECRET,
+// ELEVENLABS_AGENT_ID[_FEMALE|_MALE]. Ver ../docs/05-despliegue-cloudflare.md
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wisi-botflow",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-01",
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "botflow.lat", "custom_domain": true },
+    { "pattern": "www.botflow.lat", "custom_domain": true }
+  ],
+  // Misma carpeta estática que sirve FastAPI: una sola fuente de verdad.
+  "assets": {
+    "directory": "../backend/app/static",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "WALLET", "class_name": "Wallet" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Wallet"] }],
+  "vars": {
+    "WISIVOZ_INTENT_TTL": "180",
+    "WISIVOZ_SIGNED_PER_IP_10MIN": "30"
+  },
+  "observability": { "enabled": true }
+}

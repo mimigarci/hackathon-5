@@ -311,7 +311,7 @@ cd .. && uv run --project backend python agent/provision_client_tools.py  # crea
 # abre http://localhost:8000/demo  webapp anterior
 ```
 Requiere `ELEVENLABS_API_KEY` en `backend/.env` (ver `.env.example`).
-Despliegue público en `https://botflow.lat` con Cloudflare Tunnel: ver [docs/05-despliegue-cloudflare.md](docs/05-despliegue-cloudflare.md).
+**En producción: https://botflow.lat** (Cloudflare Workers, plan gratuito; código en `worker/`). Ver [docs/05-despliegue-cloudflare.md](docs/05-despliegue-cloudflare.md).
 
 ### Ingeniería inversa (REA)
 - `docs/01-mapa-rea-app.md` — mapa de la app PagoDirecto (Flutter, backend, mapa feature→tool).
