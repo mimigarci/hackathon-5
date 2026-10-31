@@ -29,6 +29,9 @@ class Settings:
     # ElevenLabs Conversational AI (voz de Wisi).
     elevenlabs_api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
     elevenlabs_agent_id: str = os.getenv("ELEVENLABS_AGENT_ID", "")
+    # Agentes por voz (venezolana femenina / latino masculina).
+    elevenlabs_agent_female: str = os.getenv("ELEVENLABS_AGENT_ID_FEMALE", "")
+    elevenlabs_agent_male: str = os.getenv("ELEVENLABS_AGENT_ID_MALE", "")
 
     # Clave compartida que ElevenLabs envía en cada llamada a las webhook tools.
     tool_webhook_secret: str = os.getenv("WISIVOZ_TOOL_SECRET", "dev-tool-secret")

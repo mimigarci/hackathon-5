@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wisi · PagoDirecto</title>
+<style>
+  :root{--pd:#e6005c;--pd2:#ff2e7e;--ink:#0d1b2a;--bg:#f5f6f8;--card:#ffffff;--muted:#8a90a0;--line:#eceef2}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:460px;margin:0 auto;padding:16px 16px 32px;min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .face{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#ffe3ee,#ffd1e3);display:grid;place-items:center;overflow:hidden;box-shadow:0 4px 14px #e6005c33;flex:none}
+  .face lottie-player,.face img{width:100%;height:100%;object-fit:contain}
+  h1{font-size:17px;margin:0;font-weight:800}
+  small{color:var(--muted)}
+  .seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
+  .seg button{border:none;border-radius:0;background:transparent;color:var(--ink);padding:8px 12px;font-size:13px}
+  .seg button.on{background:var(--pd);color:#fff}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  button{background:var(--card);color:var(--ink);border:1px solid var(--line);padding:10px 14px;border-radius:12px;cursor:pointer;font-size:14px}
+  button:hover{border-color:var(--pd)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.primary{background:linear-gradient(135deg,var(--pd),var(--pd2));border:none;color:#fff;font-weight:700}
+  .balcard{background:linear-gradient(135deg,var(--pd),var(--pd2));color:#fff;border-radius:18px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px #e6005c33}
+  .balcard b{font-size:22px;display:block}
+  #chat{flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding:4px 0;min-height:180px}
+  .b{padding:10px 14px;border-radius:16px;max-width:85%;font-size:14px;line-height:1.45;white-space:pre-wrap}
+  .user{align-self:flex-end;background:var(--pd);color:#fff;border-bottom-right-radius:5px}
+  .wisi{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .sys{align-self:center;background:transparent;color:var(--muted);font-size:12px}
+  .composer{display:flex;gap:8px;margin-top:10px}
+  .composer input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:22px;color:var(--ink);padding:11px 16px;font-size:14px;outline:none}
+  .pulse{animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 #e6005c66}50%{box-shadow:0 0 0 12px #e6005c00}}
+  footer{color:var(--muted);font-size:11px;margin-top:16px;line-height:1.5;display:flex;align-items:center;gap:8px}
+  footer img{height:16px;opacity:.8}
+  code{color:var(--pd)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="face" id="face"><img id="faceImg" src="/assets/wisi_avatar.gif" alt="Wisi" /></div>
+    <div style="flex:1">
+      <h1>Wisi</h1>
+      <small id="status">sin conexión</small>
+    </div>
+    <div class="seg" id="voiceSel" title="Voz del agente">
+      <button data-v="female" class="on">♀ Carito</button>
+      <button data-v="male">♂ Antonio</button>
+    </div>
+  </header>
+
+  <div class="balcard"><span>Saldo disponible<br><b id="bal">—</b></span><span style="font-size:28px">💳</span></div>
+
+  <div class="row">
+    <button class="primary" id="btnStart">Iniciar</button>
+    <button id="btnMic" disabled>🎙️ Hablar</button>
+  </div>
+
+  <div class="row" id="quick" style="display:none">
+    <button data-q="saldo">Saldo</button>
+    <button data-q="servicios">Servicios</button>
+    <button data-q="luz">Pagar luz</button>
+    <button data-q="parking">Estacionamiento</button>
+    <button data-q="donar">Donar</button>
+    <button data-q="enviar">Enviar fondos</button>
+  </div>
+
+  <div id="chat"></div>
+
+  <div class="composer" id="composer" style="display:none">
+    <input id="text" placeholder="Escribe o pulsa 🎙️ Hablar…" />
+    <button class="primary" id="btnSend">Enviar</button>
+  </div>
+
+  <footer>
+    <img src="/assets/pagoDirecto.png" alt="PagoDirecto" />
+    · El agente nunca ejecuta dinero: cada pago se confirma con biometría/PIN. Demo (ledger simulado).
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script type="module">
+import { Conversation } from "https://esm.sh/@elevenlabs/client@0.7.1";
+
+const GW = location.origin;
+const chat = document.getElementById("chat");
+const statusEl = document.getElementById("status");
+const face = document.getElementById("face");
+const balEl = document.getElementById("bal");
+
+// --- avatar Lottie (mismas animaciones que la app) -----------------------
+let anim = null, animName = null;
+function playFace(name) {
+  if (animName === name) return;
+  animName = name;
+  if (anim) { anim.destroy(); anim = null; }
+  const img = document.getElementById("faceImg");
+  if (img) img.remove();
+  anim = lottie.loadAnimation({
+    container: face, renderer: "svg", loop: true, autoplay: true,
+    path: `/assets/wisi_${name}.json`,
+  });
+}
+try { playFace("neutral"); } catch (e) {}
+
+let token = null, voice = "female", conversation = null;
+
+const add = (who, text) => {
+  const d = document.createElement("div");
+  d.className = "b " + who; d.textContent = text;
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+};
+const setStatus = (t) => (statusEl.textContent = t);
+const bs = (m) => "Bs " + (m / 100).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// --- gateway -------------------------------------------------------------
+async function session() {
+  const r = await fetch(`${GW}/api/session?principal=demo-user&voice=${voice}`, { method: "POST" });
+  return r.json();
+}
+async function callTool(name, params = {}) {
+  try { playFace("pensando"); } catch (e) {}
+  const r = await fetch(`${GW}/api/tool/${name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(params),
+  });
+  const res = await r.json();
+  try { playFace("neutral"); } catch (e) {}
+  return res;
+}
+async function approvalProof(id) {
+  const r = await fetch(`${GW}/api/approval-proof?intent_id=${id}`, {
+    method: "POST", headers: { Authorization: `Bearer ${token}` },
+  });
+  return (await r.json()).approval_proof;
+}
+async function confirmPayment(intentId) {
+  const ok = window.confirm("PagoDirecto 🔒\nConfirma esta operación con tu biometría/PIN.\n(Aceptar = aprobado)");
+  if (!ok) { add("sys", "Confirmación cancelada."); return "denied"; }
+  const proof = await approvalProof(intentId);
+  const r = await fetch(`${GW}/api/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ intent_id: intentId, approval_proof: proof }),
+  });
+  const res = await r.json();
+  add("wisi", res.speech || "Operación procesada.");
+  if (res.status === "ok" && res.data?.balance_minor != null) balEl.textContent = bs(res.data.balance_minor);
+  return JSON.stringify(res);
+}
+async function runPrepare(name, params) {
+  const res = await callTool(name, params);
+  add("wisi", res.speech || "");
+  if (res.status === "requires_confirmation" && res.data?.intent_id) await confirmPayment(res.data.intent_id);
+  return res;
+}
+
+// --- client tools que invoca el agente de voz ----------------------------
+const clientTools = {
+  get_balance: async () => { const r = await callTool("get_balance"); if (r.data?.balance_minor != null) balEl.textContent = bs(r.data.balance_minor); return JSON.stringify(r); },
+  list_services: async (p) => JSON.stringify(await callTool("list_services", p)),
+  explain_service: async (p) => JSON.stringify(await callTool("explain_service", p)),
+  list_foundations: async () => JSON.stringify(await callTool("list_foundations")),
+  prepare_payment: async (p) => JSON.stringify(await callTool("prepare_payment", p)),
+  prepare_parking: async (p) => JSON.stringify(await callTool("prepare_parking", p)),
+  prepare_donation: async (p) => JSON.stringify(await callTool("prepare_donation", p)),
+  prepare_transfer: async (p) => JSON.stringify(await callTool("prepare_transfer", p)),
+  get_operation_status: async (p) => JSON.stringify(await callTool("get_operation_status", p)),
+  create_support_case: async (p) => JSON.stringify(await callTool("create_support_case", p)),
+  open_app_screen: async (p) => { add("sys", `→ abrir pantalla: ${p.screen_key}`); return JSON.stringify(await callTool("open_app_screen", p)); },
+  confirm_payment_in_app: async (p) => await confirmPayment(p.intent_id),
+};
+
+// --- arranque ------------------------------------------------------------
+async function start() {
+  document.getElementById("btnStart").disabled = true;
+  setStatus("conectando…");
+  const s = await session();
+  token = s.session_token;
+  document.getElementById("quick").style.display = "flex";
+  document.getElementById("composer").style.display = "flex";
+  const b = await callTool("get_balance");
+  if (b.data?.balance_minor != null) balEl.textContent = bs(b.data.balance_minor);
+  add("wisi", "¡Hola! Soy Wisi. Puedo pagarte servicios, tu ticket de estacionamiento, donar o enviar fondos. ¿Qué necesitas?");
+  setStatus(s.voice_enabled ? "listo · voz disponible" : "listo · solo chat");
+  document.getElementById("btnMic").disabled = !s.voice_enabled;
+  window._signedUrl = s.signed_url;
+}
+
+async function toggleMic() {
+  if (conversation) {
+    await conversation.endSession(); conversation = null;
+    document.getElementById("btnMic").textContent = "🎙️ Hablar";
+    face.classList.remove("pulse"); playFace("neutral"); setStatus("voz detenida"); return;
+  }
+  if (!window._signedUrl) { setStatus("voz no disponible"); return; }
+  try {
+    conversation = await Conversation.startSession({
+      signedUrl: window._signedUrl, clientTools,
+      onConnect: () => { setStatus("escuchando…"); face.classList.add("pulse"); },
+      onDisconnect: () => { setStatus("voz finalizada"); face.classList.remove("pulse"); playFace("neutral"); conversation = null; document.getElementById("btnMic").textContent = "🎙️ Hablar"; },
+      onError: (e) => add("sys", "Error de voz: " + (e?.message || e)),
+      onModeChange: ({ mode }) => { setStatus(mode === "speaking" ? "Wisi hablando…" : "escuchando…"); playFace(mode === "speaking" ? "pensando" : "neutral"); },
+      onMessage: ({ message, source }) => add(source === "user" ? "user" : "wisi", message),
+    });
+    document.getElementById("btnMic").textContent = "⏹ Detener";
+  } catch (e) { add("sys", "No se pudo iniciar la voz: " + (e?.message || e)); }
+}
+
+async function quick(q) {
+  if (q === "saldo") { const r = await callTool("get_balance"); if (r.data?.balance_minor != null) balEl.textContent = bs(r.data.balance_minor); add("wisi", r.speech); }
+  else if (q === "servicios") add("wisi", (await callTool("list_services")).speech);
+  else if (q === "luz") await runPrepare("prepare_payment", { service_ref: "corpoelec", account_number: "0001-2345", amount_minor: 18000 });
+  else if (q === "parking") await runPrepare("prepare_parking", { ticket_ref: "TICKET-ABC-123" });
+  else if (q === "donar") await runPrepare("prepare_donation", { foundation_ref: "fundana", amount_minor: 5000 });
+  else if (q === "enviar") await runPrepare("prepare_transfer", { recipient_ref: "@maria", amount_minor: 25000 });
+}
+
+async function sendText() {
+  const el = document.getElementById("text"); const t = el.value.trim();
+  if (!t) return; el.value = ""; add("user", t);
+  const l = t.toLowerCase();
+  if (l.includes("saldo")) quick("saldo");
+  else if (l.includes("estacionamiento") || l.includes("parking")) quick("parking");
+  else if (l.includes("dona")) quick("donar");
+  else if (l.includes("envi") || l.includes("transfer")) quick("enviar");
+  else if (l.includes("luz") || l.includes("corpoelec")) quick("luz");
+  else if (l.includes("servicio") || l.includes("pagar")) quick("servicios");
+  else add("wisi", "Puedo: saldo, pagar servicios, estacionamiento, donar o enviar fondos. Pulsa 🎙️ para hablar con todo el poder del agente.");
+}
+
+document.getElementById("btnStart").onclick = start;
+document.getElementById("btnMic").onclick = toggleMic;
+document.getElementById("btnSend").onclick = sendText;
+document.getElementById("text").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
+document.getElementById("quick").addEventListener("click", (e) => { const q = e.target.dataset.q; if (q) quick(q); });
+document.getElementById("voiceSel").addEventListener("click", (e) => {
+  const v = e.target.dataset.v; if (!v) return; voice = v;
+  [...document.querySelectorAll("#voiceSel button")].forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  if (token) add("sys", `voz: ${v === "female" ? "Carito" : "Antonio"} — pulsa Iniciar de nuevo para aplicarla`);
+});
+</script>
+</body>
+</html>

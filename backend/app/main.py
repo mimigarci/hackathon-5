@@ -13,8 +13,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import tools
 from .config import settings
@@ -76,32 +80,59 @@ def tool_principal(
 # ---- salud / sesión ----------------------------------------------------------
 
 
+_STATIC = Path(__file__).parent / "static"
+app.mount("/assets", StaticFiles(directory=_STATIC / "assets"), name="assets")
+
+
+@app.get("/")
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/demo")
+
+
+@app.get("/demo", include_in_schema=False)
+def demo() -> FileResponse:
+    """Webapp de demo autónoma (voz + chat) servida por el propio gateway."""
+    return FileResponse(_STATIC / "demo.html")
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "mode": settings.mode}
 
 
 @app.post("/api/session")
-async def create_session(principal: str = "demo-user") -> dict[str, Any]:
+async def create_session(
+    principal: str = "demo-user", voice: str = "female"
+) -> dict[str, Any]:
     """Emite el token de sesión efímero y los datos de voz del agente.
 
-    En producción, `principal` sale de la sesión autenticada de la app, no de un
-    parámetro. Devuelve una `signed_url` de ElevenLabs cuando hay credenciales,
-    para que el agent_id nunca se exponga en el cliente.
+    `voice` ∈ {female, male} elige el agente (voz venezolana femenina / latino
+    masculina). En producción, `principal` sale de la sesión autenticada de la
+    app. Devuelve una `signed_url` de ElevenLabs para no exponer el agent_id.
     """
-    signed_url = await _elevenlabs_signed_url()
+    agent_id = _agent_for_voice(voice)
+    signed_url = await _elevenlabs_signed_url(agent_id)
     return {
         "session_token": issue_session_token(principal),
         "principal": principal,
-        "elevenlabs_agent_id": settings.elevenlabs_agent_id or "<set ELEVENLABS_AGENT_ID>",
+        "voice": voice,
+        "elevenlabs_agent_id": agent_id or "<set ELEVENLABS_AGENT_ID>",
         "signed_url": signed_url,
         "voice_enabled": bool(signed_url),
     }
 
 
-async def _elevenlabs_signed_url() -> str | None:
+def _agent_for_voice(voice: str) -> str:
+    if voice == "male" and settings.elevenlabs_agent_male:
+        return settings.elevenlabs_agent_male
+    if voice == "female" and settings.elevenlabs_agent_female:
+        return settings.elevenlabs_agent_female
+    return settings.elevenlabs_agent_id
+
+
+async def _elevenlabs_signed_url(agent_id: str) -> str | None:
     """Pide a ElevenLabs una URL firmada para la conversación (server-side)."""
-    if not (settings.elevenlabs_api_key and settings.elevenlabs_agent_id):
+    if not (settings.elevenlabs_api_key and agent_id):
         return None
     import httpx
 
@@ -110,7 +141,7 @@ async def _elevenlabs_signed_url() -> str | None:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 url,
-                params={"agent_id": settings.elevenlabs_agent_id},
+                params={"agent_id": agent_id},
                 headers={"xi-api-key": settings.elevenlabs_api_key},
             )
             r.raise_for_status()
@@ -178,6 +209,52 @@ def api_op_status(
     body: OperationStatusInput, principal: str = Depends(current_principal)
 ) -> ToolResponse:
     return tools.get_operation_status(principal, body.operation_ref)
+
+
+@app.post("/api/tool/{name}", response_model=ToolResponse)
+def api_tool(
+    name: str, body: dict[str, Any] | None = None, principal: str = Depends(current_principal)
+) -> ToolResponse:
+    """Despachador de client tools para la webapp: autentica con el token de
+    sesión y ejecuta la tool correspondiente con el principal del servidor.
+    NO expone `confirm_and_execute` (el dinero se confirma vía /api/confirm)."""
+    b = body or {}
+    match name:
+        case "get_balance":
+            return tools.get_balance(principal)
+        case "list_services":
+            return tools.list_services(principal, b.get("category"), b.get("query"))
+        case "explain_service":
+            return tools.explain_service(b.get("service_ref", ""), b.get("question"))
+        case "list_foundations":
+            return tools.list_foundations(principal)
+        case "prepare_payment":
+            return tools.prepare_payment(
+                principal, b.get("service_ref", ""), b.get("account_number", ""),
+                b.get("amount_minor"),
+            )
+        case "prepare_parking":
+            return tools.prepare_parking(principal, b.get("ticket_ref", ""))
+        case "prepare_donation":
+            return tools.prepare_donation(
+                principal, b.get("foundation_ref", ""), int(b.get("amount_minor", 0))
+            )
+        case "prepare_transfer":
+            return tools.prepare_transfer(
+                principal, b.get("recipient_ref", ""), int(b.get("amount_minor", 0)),
+                b.get("kind", "p2p"),
+            )
+        case "get_operation_status":
+            return tools.get_operation_status(principal, b.get("operation_ref", ""))
+        case "create_support_case":
+            return tools.create_support_case(
+                principal, b.get("category", ""), b.get("summary", ""),
+                b.get("related_operation_ref"),
+            )
+        case "open_app_screen":
+            return tools.open_app_screen(principal, b.get("screen_key", ""), b.get("params", {}))
+        case _:
+            raise HTTPException(status_code=404, detail="unknown_tool")
 
 
 @app.post("/api/approval-proof")

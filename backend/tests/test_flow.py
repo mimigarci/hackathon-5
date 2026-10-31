@@ -133,12 +133,17 @@ def test_model_cannot_execute_money(client):
 
 
 def test_webhook_tool_requires_secret(client):
+    from app.config import settings
+
     # sin secreto compartido -> 401
     assert client.post("/el/tools/get_balance").status_code == 401
-    # con secreto y principal -> ok
+    # con el secreto configurado y principal -> ok
     r = client.post(
         "/el/tools/get_balance",
-        headers={"x-wisivoz-tool-secret": "dev-tool-secret", "x-wisivoz-principal": "u1"},
+        headers={
+            "x-wisivoz-tool-secret": settings.tool_webhook_secret,
+            "x-wisivoz-principal": "u1",
+        },
     )
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
