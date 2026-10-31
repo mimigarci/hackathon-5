@@ -34,15 +34,28 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
-### 3) Agente de voz (ElevenLabs)
-```bash
-export ELEVENLABS_API_KEY=... GATEWAY_URL=https://tu-gateway WISIVOZ_TOOL_SECRET=...
-python3 agent/provision.py       # crea el agente y devuelve ELEVENLABS_AGENT_ID
-# añade ELEVENLABS_AGENT_ID al .env del gateway para servir la signed URL
+### 3) Webapp de voz funcional (una sola URL, sin túnel)
+El propio gateway sirve la webapp con la voz de Wisi:
 ```
+http://localhost:8000/demo
+```
+Usa **client tools** (el navegador ejecuta las tools contra el gateway), avatar
+real de Wisi y selector de voz **Carito** (femenina venezolana) / **Antonio**
+(masculina). Requiere `ELEVENLABS_API_KEY` + agentes aprovisionados en `.env`.
+
+Aprovisionar los dos agentes (voz es-VE) con client tools:
+```bash
+cd backend && uv run python ../agent/provision_client_tools.py
+# escribe ELEVENLABS_AGENT_ID_FEMALE / _MALE en backend/.env
+```
+Alternativa con webhook tools (requiere gateway público) + consola React: `web/`.
 
 ### 4) App Flutter
 Integrar `WisiLauncher` donde hoy vive el avatar (ver `flutter/wisi_voz/README.md`).
+
+### REA aplicado a otros agentes
+`docs/04-rea-grok.md`: análisis de **Grok Bot** (agente de xAI) — arquitectura de
+personas, skills, workflows, memoria e historial FTS5, y qué nos llevamos para Wisi.
 
 ## Seguridad (principio central)
 El agente **nunca ejecuta dinero**. Las tools `prepare_*` crean una intención con
