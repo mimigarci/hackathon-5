@@ -307,9 +307,11 @@ uv venv && uv pip install -e . && uv pip install pytest httpx
 uv run pytest -q                                   # 9 tests del flujo seguro
 uv run uvicorn app.main:app --port 8000
 cd .. && uv run --project backend python agent/provision_client_tools.py  # crea agentes es-VE
-# abre http://localhost:8000/demo  (avatar Wisi, voz Carito/Antonio)
+# abre http://localhost:8000/      webapp móvil nueva (voz + chat con el agente, confirmación biométrica)
+# abre http://localhost:8000/demo  webapp anterior
 ```
 Requiere `ELEVENLABS_API_KEY` en `backend/.env` (ver `.env.example`).
+Despliegue público en `https://botflow.lat` con Cloudflare Tunnel: ver [docs/05-despliegue-cloudflare.md](docs/05-despliegue-cloudflare.md).
 
 ### Ingeniería inversa (REA)
 - `docs/01-mapa-rea-app.md` — mapa de la app PagoDirecto (Flutter, backend, mapa feature→tool).
