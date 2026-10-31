@@ -9,7 +9,8 @@ mantiene: `confirm_payment_in_app` dispara la confirmación biométrica en el cl
 Escribe ELEVENLABS_AGENT_ID_FEMALE / _MALE en backend/.env.
 
 Uso:
-    cd backend && uv run python ../agent/provision_client_tools.py
+    cd backend && uv run python ../agent/provision_client_tools.py           # crea agentes
+    cd backend && uv run python ../agent/provision_client_tools.py --update  # actualiza los de .env
 """
 from __future__ import annotations
 
@@ -39,13 +40,13 @@ def _p(obj: dict) -> dict:
     return {"type": "object", **obj}
 
 
-def client_tool(name: str, desc: str, props: dict, required: list[str]) -> dict:
+def client_tool(name: str, desc: str, props: dict, required: list[str], timeout: int = 20) -> dict:
     return {
         "type": "client",
         "name": name,
         "description": desc,
         "expects_response": True,
-        "response_timeout_secs": 20,
+        "response_timeout_secs": timeout,
         "parameters": {"type": "object", "properties": props, "required": required},
     }
 
@@ -91,6 +92,21 @@ def build_tools() -> list[dict]:
             ["ticket_ref"],
         ),
         client_tool(
+            "scan_parking_qr",
+            "Abre el escáner QR de la app para leer el ticket de estacionamiento y devuelve el pago ya "
+            "preparado (intent_id y monto). Úsala cuando el usuario quiera pagar el estacionamiento y no "
+            "dicte el código del ticket.",
+            {},
+            [],
+            timeout=90,
+        ),
+        client_tool(
+            "list_movements",
+            "Abre la pantalla de movimientos y devuelve las últimas operaciones del wallet.",
+            {},
+            [],
+        ),
+        client_tool(
             "prepare_donation",
             "Prepara una donación a una organización.",
             {"foundation_ref": s("Identificador de la organización"), "amount_minor": i("Monto en céntimos")},
@@ -124,7 +140,8 @@ def build_tools() -> list[dict]:
         ),
         client_tool(
             "open_app_screen",
-            "Navega a una pantalla permitida (home, wallet, pagar_servicios, parking, donaciones, enviar_fondos, movimientos, recargas, club, mis_pagos).",
+            "Navega a una pantalla de la app: home, pagar_servicios, parking, escaner_qr, donaciones, "
+            "enviar_fondos, movimientos, mis_pagos o menu.",
             {"screen_key": s("Clave de la pantalla destino")},
             ["screen_key"],
         ),
@@ -137,24 +154,41 @@ def build_tools() -> list[dict]:
     ]
 
 
-def create_agent(h: dict, name: str, voice_id: str, prompt: str, tools: list[dict]) -> str:
-    body = {
-        "name": name,
-        "conversation_config": {
-            "agent": {
-                "first_message": "¡Hola! Soy Wisi. Puedo pagarte servicios, tu ticket de estacionamiento, donar o enviar fondos, aquí mismo. ¿Qué necesitas?",
-                "language": "es",
-                "prompt": {
-                    "prompt": prompt,
-                    "llm": "gemini-2.0-flash",
-                    "temperature": 0.3,
-                    "tools": tools,
-                },
+FIRST_MESSAGE = (
+    "¡Epa! Soy Wisi. Escaneo tu ticket de estacionamiento, pago tus servicios, "
+    "dono o envío fondos, aquí mismo. ¿Qué hacemos?"
+)
+
+
+def agent_config(voice_id: str, prompt: str, tools: list[dict]) -> dict:
+    return {
+        "agent": {
+            "first_message": FIRST_MESSAGE,
+            "language": "es",
+            "prompt": {
+                "prompt": prompt,
+                "llm": "gemini-2.0-flash",
+                "temperature": 0.3,
+                "tools": tools,
             },
-            "tts": {"voice_id": voice_id, "model_id": TTS_MODEL},
-            "asr": {"quality": "high"},
         },
+        "tts": {"voice_id": voice_id, "model_id": TTS_MODEL},
+        "asr": {"quality": "high"},
     }
+
+
+def update_agent(h: dict, agent_id: str, voice_id: str, prompt: str, tools: list[dict]) -> None:
+    r = httpx.patch(
+        f"https://api.elevenlabs.io/v1/convai/agents/{agent_id}",
+        headers=h,
+        json={"conversation_config": agent_config(voice_id, prompt, tools)},
+        timeout=60,
+    )
+    r.raise_for_status()
+
+
+def create_agent(h: dict, name: str, voice_id: str, prompt: str, tools: list[dict]) -> str:
+    body = {"name": name, "conversation_config": agent_config(voice_id, prompt, tools)}
     r = httpx.post(
         "https://api.elevenlabs.io/v1/convai/agents/create",
         headers=h,
@@ -183,6 +217,16 @@ def main() -> int:
     h = {"xi-api-key": api_key, "Content-Type": "application/json"}
     prompt = (AGENT_DIR / "system_prompt.md").read_text(encoding="utf-8")
     tools = build_tools()
+
+    if "--update" in sys.argv:
+        for suffix, voice_id in VOICES.items():
+            agent_id = os.environ.get(f"ELEVENLABS_AGENT_ID_{suffix}")
+            if not agent_id:
+                print(f"Falta ELEVENLABS_AGENT_ID_{suffix} en backend/.env", file=sys.stderr)
+                return 2
+            update_agent(h, agent_id, voice_id, prompt, tools)
+            print(f"{suffix}: {agent_id} actualizado ({len(tools)} tools)")
+        return 0
 
     for suffix, voice_id in VOICES.items():
         name = f"Wisi - PagoDirecto ({'femenina' if suffix == 'FEMALE' else 'masculina'})"
