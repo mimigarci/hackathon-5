@@ -13,6 +13,7 @@ Este plan junta lo que ya hay en el repo: la app y el diseño del asistente de m
 - Sale `POST /api/demo/reset`: para empezar de cero basta con un principal nuevo (sección 8).
 - Dos huecos nuevos en la sección 6: el Worker firma con `dev-secret-change-me` si le falta su secreto, y `/api/approval-proof` entrega pruebas de huella, PIN u OTP sin verificar nada.
 - Los agentes de voz se vuelven a crear con `provision_client_tools.py` (no con `provision.py`), y su timeout de confirmación sube de 20 a 90 segundos para que alcance a teclear el PIN.
+- 13:10: un escaneo de todas las ramas y de su historial no encontró claves filtradas, pero sí dos fallas del Worker que mueven dinero: los montos negativos y el doble débito. Además, CORS bloquea a la app en Vercel. Quedan como lo primero del carril de David (punto 8 de la sección 3 y sección 6).
 - Revisado por un crítico independiente contra el código: se agregaron el orden entre el secreto y el despliegue del PIN, el bloqueo atómico, el `pid` de reserva y el guion sin salir de la pestaña de Wisi.
 
 ## 0. La frase del demo
@@ -64,14 +65,15 @@ Del README de `main` se conserva, aunque se pause Gemini: la confirmación con r
 5. El pago de un servicio de punta a punta, por voz y por chat, con el saldo de la app al día cuando se vuelve a ella.
 6. Wisi responde «¿qué tengo pendiente?» con la herramienta `list_pending`, que va en el Worker, en los `clientTools` de `app.html` y en el agente.
 7. Plan B: un video grabado del guion y la app en modo mock, que funciona sin internet.
+8. **Lo primero de David, antes que cualquier otra cosa del Worker** (escaneo de las 13:10, sección 6): rechazar los montos que no sean enteros mayores que cero o que pasen un tope, no ejecutar dos veces una intención ya `submitted`, y cambiar CORS a `Access-Control-Allow-Headers: Authorization, Content-Type`. Son cambios de pocas líneas. Sin el de CORS, la app en Vercel no puede llamar al Worker con su token y la opción 1 no arranca.
 
 **P1: el crédito del roadmap, lo que diferencia el demo**
 
-8. El motor de Credirecto en el Worker (`worker/src/credit.ts`): reglas escritas por piso y nivel, el motivo de cada decisión y la línea del usuario demo. Un pago a crédito no descuenta el saldo, sino que suma a lo usado de la línea. Como hoy `Wallet.execute` siempre descuenta, hay que tocar el Durable Object para guardar ahí lo usado y las cuotas.
-9. Herramientas nuevas: `get_credit_status`, `quote_credit` (simula, no decide) y `prepare_credit_payment` (crea la intención en cuotas, que se confirma con el PIN igual que un pago). Van en el Worker, en los `clientTools` de `app.html` y en el agente.
-10. La pantalla Mi Credirecto en la app, con el estado y la guía de pisos.
-11. Viajes en Boletería, con 3 vuelos simulados y Credirecto Viajes.
-12. La escalada a una persona: `create_support_case` ya existe. Faltan el chip «Hablar con una persona» y la regla de "no fui yo" y "me cobraron mal".
+9. El motor de Credirecto en el Worker (`worker/src/credit.ts`): reglas escritas por piso y nivel, el motivo de cada decisión y la línea del usuario demo. Un pago a crédito no descuenta el saldo, sino que suma a lo usado de la línea. Como hoy `Wallet.execute` siempre descuenta, hay que tocar el Durable Object para guardar ahí lo usado y las cuotas.
+10. Herramientas nuevas: `get_credit_status`, `quote_credit` (simula, no decide) y `prepare_credit_payment` (crea la intención en cuotas, que se confirma con el PIN igual que un pago). Van en el Worker, en los `clientTools` de `app.html` y en el agente.
+11. La pantalla Mi Credirecto en la app, con el estado y la guía de pisos.
+12. Viajes en Boletería, con 3 vuelos simulados y Credirecto Viajes.
+13. La escalada a una persona: `create_support_case` ya existe. Faltan el chip «Hablar con una persona» y la regla de "no fui yo" y "me cobraron mal".
 
 **P2: si sobra tiempo:** el audio dentro de la app Flutter con `wisi_voz` (la opción 3), ánimos nuevos de la mascota y "Ver en la app".
 
@@ -86,7 +88,7 @@ La asignación sale de lo que cada quien ya construyó.
 | Carril | Dueño | Archivos | P0 | P1 |
 | --- | --- | --- | --- | --- |
 | App | mimigarci | `app/`, salvo las pantallas nuevas de crédito y viajes | `GatewayRepository` con `?pid=`, la mascota abre la webapp, el saludo con el aviso y el deploy en Vercel | El botón "Pagar" en Mis pagos, el chip de humano, y enlazar Mi Credirecto y Viajes desde Home y Boletería |
-| Gateway, webapp y voz | David | `worker/` (salvo `pin.ts` y `credit.ts`), `backend/`, `agent/`, `web/` y `flutter/wisi_voz/` | Unir el Worker a `main`, el secreto obligatorio, `?pid=` en `app.html`, el aviso de IA en `first_message` y en `greet()`, volver a crear los agentes con `list_pending` y el timeout de 90 s (y cargar sus IDs en el Worker), y `/api/pending` y `/api/movements` en un archivo nuevo (`worker/src/reads.ts`). Desplegar después de cada unión a `main` | Registrar las herramientas de crédito en `clientTools` y en el agente |
+| Gateway, webapp y voz | David | `worker/` (salvo `pin.ts` y `credit.ts`), `backend/`, `agent/`, `web/` y `flutter/wisi_voz/` | Primero los tres arreglos del punto 8 de la sección 3. Después: unir el Worker a `main`, el secreto obligatorio, `?pid=` en `app.html`, el aviso de IA en `first_message` y en `greet()`, volver a crear los agentes con `list_pending` y el timeout de 90 s (y cargar sus IDs en el Worker), y `/api/pending` y `/api/movements` en un archivo nuevo (`worker/src/reads.ts`). Desplegar después de cada unión a `main` | Registrar las herramientas de crédito en `clientTools` y en el agente |
 | PIN y crédito | Andrés | `worker/src/pin.ts` y `worker/src/credit.ts` con sus pruebas (nuevos); los ganchos en `worker/src/index.ts` y el campo de PIN en `app.html`; `app/lib/screens/credit_screen.dart` y `travel_screen.dart` (nuevos) | El PIN de punta a punta en la webapp. Empieza por la lógica pura de `pin.ts`, que no necesita desplegar. El Worker no tiene runner de pruebas: las funciones puras se prueban con `node --test --experimental-strip-types` (Node 22) y el resto con `npx wrangler dev` | El motor, sus herramientas en el Worker y las pantallas |
 
 **Archivos compartidos.** `worker/src/index.ts` y `app.html` los tocan David y Andrés. Para no pisarse: se avisa en el chat antes de empezar, hay un solo PR abierto a la vez por archivo, David revisa los de Andrés y nadie despliega sin pasar por `main`. Para que eso no frene a nadie, lo nuevo va en archivos nuevos y en `index.ts` solo entran las líneas que los conectan.
@@ -178,6 +180,12 @@ El repo es público, así que todo lo que diga el código lo puede leer cualquie
 | El PIN es el mismo para todos los principales | `WISIVOZ_DEMO_PIN` | Como los principales son gratis, el bloqueo por principal no frena a quien prueba PINs desde muchos | PIN de 6 dígitos y `pid` del demo secreto: aunque alguien adivine el PIN, no tiene sesión en ese monedero |
 | El bloqueo puede tumbar el demo | El bloqueo de 15 minutos por principal | Quien vea el `pid` del demo mete 3 PIN errados, sin necesidad de saber el bueno, y el monedero del demo queda bloqueado | Tener un `pid` de reserva listo para las dos caras. Mostrar el bloqueo en otro `pid`, nunca en el del demo |
 | Wisi no dice que es IA ni avisa del PIN | `agent/system_prompt.md`, `greet()` en `app.html` y el saludo de la app | Falta lo que pide el roadmap: transparencia (AI Act, art. 50) y aviso antiestafa | Agregarlo en los tres lugares (P0) |
+| Un monto negativo crea dinero | `prepare_donation`, `prepare_transfer` y `prepare_payment` en `worker/src/index.ts`. El Worker no tiene el `_bad_amount` que sí tiene Python | Una donación de `-5000` pasa el chequeo de saldo, y al confirmarla el saldo sube | P0 de David: rechazar todo monto que no sea un entero mayor que cero o que pase un tope en céntimos (por ejemplo `10_000_00`). `int()` hoy convierte el texto o un `NaN` en 0, y el 0 también pasa. El `amount_minor` opcional de `prepare_payment` se valida cuando viene. Probar que el condominio (`1_200_00`) y su cotización a crédito siguen pasando |
+| La misma intención se debita dos veces | `Wallet.execute` en `worker/src/index.ts` | La protección contra pagos repetidos depende de la prueba, y hoy hay tres pruebas válidas por intención (huella, PIN y OTP). `execute` marca la intención `submitted`, pero no lo revisa | P0 de David: guardar el `operation_ref` en la intención al ejecutarla y, si ya está `submitted`, devolver esa operación con `replayed: true` sin tocar el saldo. Ese chequeo va antes del de saldo, y el replay con la misma prueba sigue igual. El PIN de la sección 5.3 deja una sola prueba por intención, pero el chequeo va igual |
+| CORS no deja pasar el token | `Access-Control-Allow-Headers: *` en el Worker (comprobado en vivo) | Según el estándar, `*` no cubre `Authorization`: la app en Vercel no puede llamar al Worker con su token | P0 de David: `Authorization, Content-Type` |
+| Los agentes de voz se pueden usar sin pasar por el Worker | `provision_client_tools.py` no activa la autenticación del agente, y el Worker devuelve el `agent_id` en claro. El límite de URL firmadas vive en la memoria de cada instancia y no se aplica con `signed=false`. El monitor de disponibilidad pide una URL firmada cada 30 minutos | Con el `agent_id`, cualquiera gasta créditos de ElevenLabs | Al volver a crear los agentes (punto 3 de la sección 3): activar la autenticación y un tiempo máximo por conversación, y que el Worker no devuelva el `agent_id` cuando entrega una `signed_url` (la webapp solo usa la `signed_url`). Que el monitor pida la sesión con `signed=false`: su chequeo de voz sigue funcionando |
+| El gateway de Python acepta cualquier texto como prueba | `confirm_and_execute` en `backend/app/tools.py` y `ledger.execute`: no comparan la firma | Con cualquier texto se confirma un pago | Solo importa si se publica como respaldo. No publicarlo así |
+| `wisi_voz` y la consola de `web/` piden el saldo con GET | `wisi_gateway.dart` y `web/src/gateway.ts` | El Worker responde 405 | Cambiar a POST cuando se usen. No salen en el guion |
 | Supabase: tres permisos abiertos y tablas sin `grant` | `supabase/schema.sql` | Solo importa si se vuelve a Supabase. La app puede marcar pagos como pagados, cambiarse el nivel y completarse retos. Desde el 30 oct 2026, las tablas nuevas sin `grant` no se exponen a la API ([changelog](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically)) | Si se vuelve: `payments` y `user_club_tasks` solo de lectura; en `profiles`, `revoke update` y `grant update (username, avatar_url)` a `authenticated`; y un `grant select` por tabla |
 
 ## 7. Orden del día (ajustarlo a la hora de entrega)
@@ -198,7 +206,7 @@ Cómo sincronizar: cada quien en su rama y PRs pequeños a `main` más o menos c
 
 ## 8. Guion del demo (3 minutos)
 
-Los montos salen de `worker/src/fixtures.ts`, espejo de `backend/app/fixtures.py`: saldo de Bs. 2.500,00, Movistar Bs. 320,00 y Condominio Bs. 1.200,00.
+Los montos salen de `worker/src/fixtures.ts`, espejo de `backend/app/fixtures.py`: saldo de Bs. 5.000,00 (David lo subió en el commit 4b28238), Movistar Bs. 320,00 y Condominio Bs. 1.200,00.
 
 El **guion P0** son los pasos 1, 2, 3, 4 y 6, más un «cancelar» y la frase del cierre. Tiene que funcionar a las T+3:30. Los pasos 5 y 7 entran cuando llegue el P1.
 
@@ -207,14 +215,14 @@ Los pasos 3 a 6 se hacen sin salir de la pestaña de Wisi: la webapp corta la vo
 1. Se abre la app publicada con el `pid` del demo y se ve el saldo del Worker.
 2. Se toca a Wisi, que abre la webapp con el mismo `pid`: «Hola, soy Wisi, el asistente con IA de Pago Directo. Nunca te pediré tu PIN ni te llamaré».
 3. Por voz: «¿Qué tengo pendiente?». Wisi lista los servicios con su monto.
-4. «Paga el Movistar»: Wisi lee el resumen, sale la hoja de confirmación, se pone el PIN y sale "Listo". El saldo baja a Bs. 2.180,00.
+4. «Paga el Movistar»: Wisi lee el resumen, sale la hoja de confirmación, se pone el PIN y sale "Listo". El saldo baja a Bs. 4.680,00.
 5. «Paga el condominio con Credirecto»: Wisi ofrece 2 cuotas de Bs. 600,00 con sus fechas y el total. Se pone el PIN y el motor aprueba y dice por qué. El saldo no cambia: baja lo disponible de la línea.
 6. «Me cobraron mal»: Wisi abre un caso de soporte con su número.
-7. Se vuelve a la app, que muestra Bs. 2.180,00. Cierre: la frase de la sección 0, y Viajes como muestra de los pisos 2 y 3 del roadmap (turismo, carro y casa).
+7. Se vuelve a la app, que muestra Bs. 4.680,00. Cierre: la frase de la sección 0, y Viajes como muestra de los pisos 2 y 3 del roadmap (turismo, carro y casa).
 
 Ensayar también lo que el jurado puede probar: un PIN errado, decir "no" en la confirmación, "cancelar" a mitad de un flujo y pedir algo que no existe. El bloqueo al tercer PIN errado se muestra en otro `pid`, no en el del demo.
 
-**Antes de presentar**, abrir las dos caras con un `pid` nuevo y aleatorio, y tener otro igual de reserva por si el primero se bloquea. Ese monedero empieza en Bs. 2.500,00, con los pendientes completos y el PIN sin bloqueo, y los ensayos quedan en sus propios monederos. Por eso ya no hace falta un endpoint de reinicio.
+**Antes de presentar**, abrir las dos caras con un `pid` nuevo y aleatorio, y tener otro igual de reserva por si el primero se bloquea. Ese monedero empieza en Bs. 5.000,00, con los pendientes completos y el PIN sin bloqueo, y los ensayos quedan en sus propios monederos. Por eso ya no hace falta un endpoint de reinicio.
 
 ## 9. Riesgos de hoy
 
@@ -225,7 +233,7 @@ Ensayar también lo que el jurado puede probar: un PIN errado, decir "no" en la 
 | Dos gateways que se separan | El de Python y el Worker dejan de coincidir | Hoy solo cuenta el Worker. El de Python se congela, y deja de servir como respaldo cuando entre el PIN: comparte `app.html` con el Worker y espera el `intent_id` en la URL, así que con la hoja nueva no confirma nada. El respaldo real es el video |
 | Una sola persona despliega | Solo David tiene el token de Cloudflare | PRs pequeños a `main`, y David despliega después de cada unión |
 | Choques en `index.ts` y `app.html` | David y Andrés editan el mismo archivo | Avisar antes y un solo PR abierto por archivo (sección 4) |
-| Los ensayos gastan el saldo | El monedero persiste y el demo arranca con menos de Bs. 2.500,00 | Un `pid` nuevo antes de presentar |
+| Los ensayos gastan el saldo | El monedero persiste y el demo arranca con menos de Bs. 5.000,00 | Un `pid` nuevo antes de presentar |
 | `botflow.lat` no carga en un teléfono | Ese teléfono consultó el dominio antes de que existiera y guardó la respuesta vacía | Usar `https://wisi-botflow.david-a6c.workers.dev` |
 | Wi-Fi del lugar o ruido para la voz | La voz no entiende o no carga | El chat de la webapp y el video grabado |
 | Fricción en el equipo por pausar Gemini | La discusión se come la tarde | Decidir en 15 minutos con el punto de control. Lo que se pausa queda para la fase 1 |
