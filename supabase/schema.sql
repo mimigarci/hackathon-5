@@ -131,7 +131,12 @@ begin
   insert into public.profiles (id, username)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1))
+    -- Anonymous users (MVP, no login) have no email: fall back to an id-based name.
+    coalesce(
+      new.raw_user_meta_data ->> 'username',
+      nullif(split_part(new.email, '@', 1), ''),
+      'usuario_' || left(new.id::text, 8)
+    )
   );
   insert into public.wallets (user_id) values (new.id);
   return new;
