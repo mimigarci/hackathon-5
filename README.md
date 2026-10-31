@@ -32,6 +32,29 @@ Without Supabase config the app runs on **mock data** (`lib/data/mock_data.dart`
 that matches the reference screens. Set `MockData.showSampleData = true` to see
 filled lists.
 
+### Deploy (web, Vercel)
+
+`app/vercel.json` installs Flutter (pinned to 3.47.8) on Vercel's build
+machine and runs `flutter build web`.
+
+1. Vercel → **Add New → Project** → import this repo.
+2. **Root Directory = `app`**. Leave the framework preset as "Other".
+3. **Environment Variables**: `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
+   (same values as `env.json`). They are baked in at build time, so redeploy
+   after changing them.
+4. Pushes to `main` deploy to production; other branches get preview URLs.
+
+Manual alternative (no Git integration):
+
+```bash
+cd app
+flutter build web --release --dart-define-from-file=env.json
+npx vercel deploy build/web --prod
+```
+
+The Edge Functions deploy to Supabase separately (`supabase functions deploy`,
+`supabase secrets set`) and must allow the Vercel domain in their CORS headers.
+
 ### Supabase setup (MVP, no login)
 
 1. Supabase dashboard → **SQL Editor** → run `supabase/schema.sql`.
