@@ -53,7 +53,7 @@ export const CATALOG: CatalogItem[] = [
   { offer_id: "mercantil_rcv", piso: 1, vertical: "seguros", partner: "Seguros Mercantil", title: "Póliza RCV para tu carro", detail: "Responsabilidad civil de vehículos en cuotas sin interés.", currency: "VES", price_minor: 140000 },
   { offer_id: "saga_roques", piso: 2, vertical: "turismo", partner: "SAGA", title: "Los Roques: 3 días con posada y traslados", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 480000 },
   { offer_id: "saga_merida", piso: 2, vertical: "turismo", partner: "SAGA", title: "Mérida: posada y experiencia de montaña", detail: "Plan de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 260000 },
-  { offer_id: "estei_margarita", piso: 2, vertical: "hospedaje", partner: "Estei", title: "Margarita: 2 noches de hospedaje", detail: "Hospedaje de Estei con inicial y cuotas quincenales.", currency: "VES", price_minor: 180000 },
+  { offer_id: "saga_margarita", piso: 2, vertical: "turismo", partner: "SAGA", title: "Margarita: 2 noches de hospedaje", detail: "Hospedaje de SAGA con inicial y cuotas quincenales.", currency: "VES", price_minor: 180000 },
   { offer_id: "conduce_corolla", piso: 3, vertical: "vehiculo", partner: "Conduce", title: "Toyota Corolla 2019", detail: "Vehículo de Conduce. Crédito de un banco aliado; Pago Directo solo precalifica.", currency: "USD", price_minor: 1450000 },
   { offer_id: "propiedash_apto", piso: 3, vertical: "inmueble", partner: "Propiedash", title: "Apartamento de 2 habitaciones en Caracas", detail: "Inmueble de Propiedash. Crédito de un banco aliado; Pago Directo solo precalifica.", currency: "USD", price_minor: 4800000 },
 ];
@@ -183,6 +183,14 @@ function toOffer(c: CatalogItem, state: CreditState): Offer {
 
 export function scanOffers(state: CreditState, _now: Date) {
   const offers = CATALOG.map((c) => toOffer(c, state));
+  const summary = { disponible: 0, precalificado: 0, por_desbloquear: 0 };
+  for (const o of offers) summary[o.status]++;
+  return { offers, summary };
+}
+
+/** Lo que ve el usuario: SAGA centraliza el crédito. El resto del catálogo no se ofrece. */
+export function scanSaga(state: CreditState, now: Date) {
+  const offers = scanOffers(state, now).offers.filter((o) => o.partner === "SAGA");
   const summary = { disponible: 0, precalificado: 0, por_desbloquear: 0 };
   for (const o of offers) summary[o.status]++;
   return { offers, summary };

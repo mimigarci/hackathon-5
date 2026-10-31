@@ -13,7 +13,10 @@
     {
       "name": "wisi-worker",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd worker && npx wrangler dev --port 8787 --local-upstream localhost:8787"],
+      "runtimeArgs": [
+        "/c",
+        "cd worker && npx wrangler dev --port 8787 --local-upstream localhost:8787"
+      ],
       "port": 8787
     },
     {
@@ -27,6 +30,15 @@
     },
     {
       "name": "wisi-worker",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd worker && eval \"$(fnm env)\" && fnm use 22 >/dev/null && npx wrangler dev --port 8787 --host localhost"
+      ],
+      "port": 8787
+    },
+    {
+      "name": "wisi-worker-linux",
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",

@@ -12,7 +12,7 @@ import {
   CATALOG, CATALOG_KIND, CREDIT_INSTALLMENTS, CREDIT_LIMIT_MINOR, FOUNDATIONS, INITIAL_WALLET_BALANCE_MINOR,
   MAX_QUANTITY, MAX_TOPUP_MINOR, SERVICES, TOPUP_METHODS,
 } from "./fixtures";
-import { checkOffer, demoState, findOffer, lineOf, lines, nextInstallment, planFor, precalifyInfo, quote, scanOffers } from "./credit.ts";
+import { checkOffer, demoState, findOffer, lineOf, lines, nextInstallment, planFor, precalifyInfo, quote, scanSaga } from "./credit.ts";
 import type { CreditState, Plan } from "./credit.ts";
 import { DAILY_CAP, think } from "./brain.ts";
 import { answerCredit } from "./credit-texts.ts";
@@ -415,16 +415,14 @@ const tools = {
   },
   async scan_credit_offers(env: Env, p: string) {
     const { state } = await wallet(env, p).creditView();
-    const { offers, summary } = scanOffers(state, new Date());
-    const per = (n: number) => offers.filter((o) => o.piso === n && o.status !== "por_desbloquear").length;
-    const speech = `Encontré ${summary.disponible} ofertas disponibles y ${summary.precalificado} precalificadas, con ${summary.por_desbloquear} por desbloquear. ` +
-      `Cotidianas: ${per(1)}, turismo: ${per(2)}, patrimonio: ${per(3)}. Todo es una simulación.`;
+    const { offers, summary } = scanSaga(state, new Date());
+    const speech = `Hay ${summary.disponible} planes de SAGA para armar tu orden de compra a crédito. Es una simulación.`;
     return resp("ok", speech, { offers, summary });
   },
   /** Pregunta de crédito con respuesta preparada; matched=false si no es de aquí. */
   async answer_credit_question(env: Env, p: string, text: string) {
     const { state, plans } = await wallet(env, p).creditView();
-    const a = answerCredit(text, state, scanOffers(state, new Date()).offers, plans);
+    const a = answerCredit(text, state, scanSaga(state, new Date()).offers, plans);
     return resp("ok", a?.reply ?? null, { matched: !!a, intent: a?.intent ?? null });
   },
   async quote_credit(env: Env, p: string, offer_id: string, installments: unknown) {
@@ -465,7 +463,7 @@ const tools = {
       take: (t) => w.brainTake(t),
       cacheGet: (k) => w.brainCacheGet(k),
       cachePut: (k, v) => w.brainCachePut(k, v),
-      offers: async () => scanOffers((await w.creditView()).state, new Date()).offers,
+      offers: async () => scanSaga((await w.creditView()).state, new Date()).offers,
     });
     console.log(JSON.stringify({ brain: out.tier, model: out.model ?? null, cost_usd: out.cost_usd ?? null }));
     return resp("ok", out.reply || null, out as unknown as Record<string, unknown>);

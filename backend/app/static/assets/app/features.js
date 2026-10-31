@@ -110,58 +110,6 @@ export function installFeatures(ctx) {
     },
   };
 
-  // ---------------------------------------------------------------- Credirecto
-  shell("credit", "Credirecto");
-  async function refreshCredit() {
-    try { state.credit = (await callTool("get_credit")).data; } catch { return; }
-    const c = state.credit, used = c.used_minor;
-    for (const el of $$(".js-credi-t")) el.textContent = used ? `Disponible ${bs(c.available_minor)}` : "Tu crédito, al instante";
-    for (const el of $$(".js-credi-s")) el.textContent = used ? `Debes ${bs(used)} · ${c.installments} cuotas de ${bs(c.installment_minor)}` : `Hasta ${bs(c.limit_minor).replace(",00", "")} en tu wallet, en ${c.installments} cuotas.`;
-    for (const el of $$(".js-credi-m")) el.style.width = `${Math.round((used / c.limit_minor) * 100)}%`;
-  }
-  ctx.refreshCredit = refreshCredit;
-  S.credit = {
-    async enter(p = {}) {
-      const pg = page("credit");
-      fill(pg, loading());
-      await refreshCredit();
-      const c = state.credit;
-      if (!c) return fill(pg, emptyPlain("No pudimos cargar Credirecto", "Revisa tu conexión e inténtalo de nuevo."));
-      const req = h("button", { type: "button", class: "btn btn-primary btn-block" }, "Solicitar");
-      const paintReq = () => { const a = parseBs($("crAmt").value); req.textContent = a ? `Solicitar ${bs(a)}` : "Solicitar"; req.disabled = !a || a > c.available_minor; };
-      fill(pg, 
-        h("div", { class: "credi", style: "min-height:170px" },
-          h("span", { class: "brand", html: '<img src="/assets/pd/cr/credirecto_isotipo.svg" alt="" /><img class="wm" src="/assets/pd/cr/credirecto_wordmark.svg" alt="Credirecto" />' }),
-          h("small", { style: "margin-top:auto" }, "Disponible"),
-          h("span", { class: "big num" }, bs(c.available_minor)),
-          h("span", { class: "meter" }, h("i", { style: `width:${Math.round((c.used_minor / c.limit_minor) * 100)}%` }))),
-        h("dl", { class: "kv card" },
-          h("div", {}, h("dt", {}, "Línea total"), h("dd", { class: "num" }, bs(c.limit_minor))),
-          h("div", {}, h("dt", {}, "Usado"), h("dd", { class: "num" }, bs(c.used_minor))),
-          h("div", {}, h("dt", {}, "Cuotas"), h("dd", {}, `${c.installments} quincenales, sin intereses`))),
-        c.available_minor > 0 ? h("div", { class: "card" }, h("h3", {}, "Solicita dinero a tu wallet"), h("p", {}, "Llega al instante y lo pagas en cuotas."),
-          h("div", { style: "display:grid;gap:12px;margin-top:12px" },
-            moneyField("crAmt", p.amount_minor ?? Math.min(500_00, c.available_minor), "Monto", `Máximo ${bs(c.available_minor)}`),
-            amountChips([200_00, 500_00, 1_000_00, c.available_minor].filter((v, i, a) => v <= c.available_minor && a.indexOf(v) === i), "crAmt", paintReq),
-            req)) : null,
-        c.used_minor > 0 ? h("div", { class: "card" }, h("h3", {}, "Abona a tu deuda"), h("p", {}, `Debes ${bs(c.used_minor)}. Cuota sugerida: ${bs(c.installment_minor)}.`),
-          h("div", { style: "margin-top:12px" }, btn(`Abonar ${bs(Math.min(c.installment_minor, c.used_minor))}`, (e) => runPrepare("prepare_credit_payment", { amount_minor: Math.min(c.installment_minor, c.used_minor) }, e.currentTarget), "btn btn-ghost btn-block"))) : null,
-        h("section", { class: "cr-promo", "aria-labelledby": "crPromoT" },
-          h("h3", { id: "crPromoT" }, "Escanea créditos en todo el ecosistema"),
-          h("p", {}, "Servicios, TuGruero, Seguros Mercantil, viajes con SAGA y Estei, carros con Conduce y casas con Propiedash"),
-          h("button", { type: "button", class: "cr-go", onclick: () => push("crscan") }, "Escanear mis créditos")),
-        h("p", { class: "hint" }, "Simulación de demostración: no es una oferta de crédito real."));
-      if ($("crAmt")) {
-        $("crAmt").addEventListener("input", paintReq); paintReq();
-        req.onclick = () => {
-          const a = parseBs($("crAmt").value);
-          if (p.intent_id && a === p.amount_minor) return ctx.confirmOp(p.intent_id, "ui");
-          runPrepare("prepare_credit", { amount_minor: a }, req);
-        };
-      }
-    },
-  };
-
   // ---------------------------------------------------------------- Mis vehículos
   const plates = () => storeJSON.get("pd.plates", []);
   const PLATE = /^[A-Z0-9]{6,7}$/;

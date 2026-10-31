@@ -138,19 +138,6 @@ def build_tools() -> list[dict]:
             },
             ["method", "amount_minor"],
         ),
-        client_tool("get_credit", "Consulta la línea Credirecto: disponible, usado y cuotas. Abre Credirecto.", {}, []),
-        client_tool(
-            "prepare_credit",
-            "Prepara un desembolso de Credirecto al wallet (máximo el disponible, en 4 cuotas).",
-            {"amount_minor": i("Monto en céntimos")},
-            ["amount_minor"],
-        ),
-        client_tool(
-            "prepare_credit_payment",
-            "Prepara un abono a la deuda de Credirecto desde el wallet.",
-            {"amount_minor": i("Monto en céntimos")},
-            ["amount_minor"],
-        ),
         client_tool(
             "prepare_donation",
             "Prepara una donación a una organización.",
@@ -188,7 +175,7 @@ def build_tools() -> list[dict]:
             "Navega a una pantalla de la app: home, pagar_servicios, parking, escaner_qr, donaciones, "
             "enviar_fondos, depositar, credirecto, escanear_creditos, parquimetros, seguros, boleteria, tugruero, jomi, movimientos, "
             "mis_pagos, notificaciones, racha, mis_vehiculos, mis_cuentas, asistencia o menu. "
-            "credirecto es tu línea de efectivo; escanear_creditos es el escáner de ofertas del ecosistema.",
+            "credirecto y escanear_creditos abren el área de Créditos.",
             {"screen_key": s("Clave de la pantalla destino")},
             ["screen_key"],
         ),
@@ -209,10 +196,15 @@ def build_tools() -> list[dict]:
             ["text"],
         ),
         client_tool(
+            "build_credit_order",
+            "Abre un plan de SAGA con sus cuotas para armar la orden de compra a crédito. El usuario toca el botón; "
+            "no se cobra nada y la orden se guarda en su navegador.",
+            {"offer_id": s("offer_id devuelto por scan_credit_offers"), "installments": i("Número de cuotas")},
+            ["offer_id"],
+        ),
+        client_tool(
             "scan_credit_offers",
-            "Escanea los créditos posibles en todo el ecosistema: servicios, estacionamiento, boletería, "
-            "TuGruero, Seguros Mercantil, viajes de SAGA y Estei, vehículos de Conduce e inmuebles de "
-            "Propiedash. Abre la pantalla Escáner de créditos con el resultado.",
+            "Lista los planes de SAGA disponibles a crédito y abre el área de Créditos.",
             {},
             [],
         ),
@@ -221,20 +213,6 @@ def build_tools() -> list[dict]:
             "Simula las cuotas de una oferta. No guarda nada ni aprueba nada.",
             {"offer_id": s("Identificador de la oferta del escaneo"), "installments": i("Número de cuotas")},
             ["offer_id", "installments"],
-        ),
-        client_tool(
-            "prepare_credit_offer",
-            "Prepara el uso de Credirecto en una oferta del escáner (pisos 1 o 2). Devuelve un intent_id que el "
-            "usuario confirma en la app; NO aprueba ni mueve dinero.",
-            {"offer_id": s("Identificador de la oferta"), "installments": i("Número de cuotas")},
-            ["offer_id", "installments"],
-        ),
-        client_tool(
-            "precalify_credit",
-            "Arma una precalificación simulada para un vehículo o un inmueble (piso 3). El banco aliado "
-            "decide; no se envía nada a ningún banco.",
-            {"offer_id": s("Identificador de la oferta del piso 3")},
-            ["offer_id"],
         ),
         client_tool(
             "confirm_payment_in_app",

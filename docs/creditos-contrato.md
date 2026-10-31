@@ -2,6 +2,9 @@
 
 31 oct 2026 · Andrés · contrato compartido entre el Worker (`worker/src/`) y la webapp (`backend/app/static/`). Todo es **simulado**: no hay dinero real, ni bancos, ni envío de datos a aliados.
 
+> **Alcance actual:** la web solo ofrece planes de SAGA y arma órdenes de compra guardadas en el navegador, sin mover dinero. El resto del catálogo y `prepare_credit_offer` siguen en el motor, pero no se usan.
+
+
 ## 1. Perfil demo y reglas del motor
 
 El motor vive en `worker/src/credit.ts` (funciones puras). Wisi y el modelo de lenguaje nunca deciden: solo muestran lo que el motor responde, con su motivo.
@@ -30,7 +33,7 @@ Las cuotas se reparten en partes iguales en céntimos, y el resto va a la últim
 | `mercantil_rcv` | 1 | seguros | Seguros Mercantil | Póliza RCV para tu carro | VES | 140000 |
 | `saga_roques` | 2 | turismo | SAGA | Los Roques: 3 días con posada y traslados | VES | 480000 |
 | `saga_merida` | 2 | turismo | SAGA | Mérida: posada y experiencia de montaña | VES | 260000 |
-| `estei_margarita` | 2 | hospedaje | Estei | Margarita: 2 noches de hospedaje | VES | 180000 |
+| `saga_margarita` | 2 | hospedaje | Estei | Margarita: 2 noches de hospedaje | VES | 180000 |
 | `conduce_corolla` | 3 | vehiculo | Conduce | Toyota Corolla 2019 | USD | 1450000 |
 | `propiedash_apto` | 3 | inmueble | Propiedash | Apartamento de 2 habitaciones en Caracas | USD | 4800000 |
 
