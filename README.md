@@ -8,6 +8,9 @@ needs input. It always asks for confirmation before the final step.
 Stack: Flutter (Dart) app · Supabase (Postgres + Edge Functions in TypeScript) ·
 Gemini (intent analysis) · ElevenLabs (voice).
 
+Home feature coverage: [REA audit, observed inputs and modeling gaps](docs/rea-home/README.md).
+This audit distinguishes visible Home cards, partial agent specifications and implemented flows.
+
 ```
 app/        Flutter app (Android, iOS, web)
 supabase/   SQL schema, RLS policies and seed data
