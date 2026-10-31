@@ -192,3 +192,57 @@ def test_movements_after_confirm(client):
     assert movs[0]["kind"] == "parking"
     assert movs[0]["title"] == "Estacionamiento · TCK-48213"
     assert movs[0]["amount_minor"] == -prep["data"]["summary"]["amount_minor"]
+
+
+def _confirm(client, h, intent_id):
+    proof = client.post(
+        "/api/approval-proof", headers=h, params={"intent_id": intent_id}
+    ).json()["approval_proof"]
+    return client.post(
+        "/api/confirm", headers=h, json={"intent_id": intent_id, "approval_proof": proof}
+    ).json()
+
+
+def test_topup_credits_balance_and_shows_as_income(client):
+    h = _auth(client)
+    bal0 = client.post("/api/tool/get_balance", headers=h, json={}).json()["data"]["balance_minor"]
+    prep = client.post(
+        "/api/tool/prepare_topup", headers=h, json={"method": "pago_movil", "amount_minor": 100000}
+    ).json()
+    assert prep["status"] == "requires_confirmation"
+    conf = _confirm(client, h, prep["data"]["intent_id"])
+    assert conf["data"]["balance_minor"] == bal0 + 100000
+    movs = client.post("/api/tool/list_movements", headers=h, json={}).json()["data"]["movements"]
+    assert movs[0]["amount_minor"] == 100000 and movs[0]["title"] == "Recarga · Pago Móvil"
+    too_much = client.post(
+        "/api/tool/prepare_topup", headers=h, json={"method": "pago_movil", "amount_minor": 10**9}
+    ).json()
+    assert too_much["status"] == "denied"
+
+
+def test_purchase_amount_is_decided_by_server(client):
+    h = _auth(client)
+    prep = client.post(
+        "/api/tool/prepare_purchase", headers=h,
+        json={"product_ref": "ev_gaitas", "quantity": 3, "amount_minor": 1},
+    ).json()
+    assert prep["data"]["summary"]["amount_minor"] == 3 * 25000
+    capped = client.post(
+        "/api/tool/prepare_purchase", headers=h, json={"product_ref": "pq_centro", "quantity": 99}
+    ).json()
+    assert capped["data"]["summary"]["quantity"] == 8
+
+
+def test_credit_line_disburses_and_respects_limit(client):
+    h = _auth(client)
+    bal0 = client.post("/api/tool/get_balance", headers=h, json={}).json()["data"]["balance_minor"]
+    prep = client.post("/api/tool/prepare_credit", headers=h, json={"amount_minor": 150000}).json()
+    conf = _confirm(client, h, prep["data"]["intent_id"])
+    assert conf["status"] == "ok" and conf["data"]["balance_minor"] == bal0 + 150000
+    credit = client.post("/api/tool/get_credit", headers=h, json={}).json()["data"]
+    assert credit["used_minor"] == 150000 and credit["available_minor"] == 50000
+    over = client.post("/api/tool/prepare_credit", headers=h, json={"amount_minor": 60000}).json()
+    assert over["status"] == "denied"
+    pay = client.post("/api/tool/prepare_credit_payment", headers=h, json={"amount_minor": 50000}).json()
+    _confirm(client, h, pay["data"]["intent_id"])
+    assert client.post("/api/tool/get_credit", headers=h, json={}).json()["data"]["used_minor"] == 100000

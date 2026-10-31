@@ -107,6 +107,50 @@ def build_tools() -> list[dict]:
             [],
         ),
         client_tool(
+            "list_catalog",
+            "Lista opciones con precio de una sección: parquimetros (zonas, precio por hora), seguros "
+            "(pólizas; type=vehiculos|personas) o boleteria (eventos, precio por boleto). Abre esa pantalla.",
+            {
+                "section": {"type": "string", "description": "Sección", "enum": ["parquimetros", "seguros", "boleteria"]},
+                "type": s("Solo seguros: vehiculos o personas"),
+            },
+            ["section"],
+        ),
+        client_tool(
+            "prepare_purchase",
+            "Prepara (NO ejecuta) una compra del catálogo: parquímetro (quantity = horas, plate = placa), "
+            "póliza de seguro o boletos de un evento (quantity = boletos). El precio lo calcula el sistema.",
+            {
+                "product_ref": s("product_ref devuelto por list_catalog"),
+                "quantity": i("Horas de parquímetro o número de boletos (1 si es seguro)"),
+                "plate": s("Placa del vehículo, solo parquímetros"),
+            },
+            ["product_ref"],
+        ),
+        client_tool(
+            "prepare_topup",
+            "Prepara una recarga del wallet (Depositar). method: pago_movil, cuentas_nacionales, bdv o humaniz. "
+            "Ofrécela cuando el saldo no alcance.",
+            {
+                "method": {"type": "string", "description": "Método de recarga", "enum": ["pago_movil", "cuentas_nacionales", "bdv", "humaniz"]},
+                "amount_minor": i("Monto en céntimos"),
+            },
+            ["method", "amount_minor"],
+        ),
+        client_tool("get_credit", "Consulta la línea Credirecto: disponible, usado y cuotas. Abre Credirecto.", {}, []),
+        client_tool(
+            "prepare_credit",
+            "Prepara un desembolso de Credirecto al wallet (máximo el disponible, en 4 cuotas).",
+            {"amount_minor": i("Monto en céntimos")},
+            ["amount_minor"],
+        ),
+        client_tool(
+            "prepare_credit_payment",
+            "Prepara un abono a la deuda de Credirecto desde el wallet.",
+            {"amount_minor": i("Monto en céntimos")},
+            ["amount_minor"],
+        ),
+        client_tool(
             "prepare_donation",
             "Prepara una donación a una organización.",
             {"foundation_ref": s("Identificador de la organización"), "amount_minor": i("Monto en céntimos")},
@@ -141,7 +185,8 @@ def build_tools() -> list[dict]:
         client_tool(
             "open_app_screen",
             "Navega a una pantalla de la app: home, pagar_servicios, parking, escaner_qr, donaciones, "
-            "enviar_fondos, movimientos, mis_pagos o menu.",
+            "enviar_fondos, depositar, credirecto, parquimetros, seguros, boleteria, movimientos, "
+            "mis_pagos, notificaciones, racha, mis_vehiculos, mis_cuentas, asistencia o menu.",
             {"screen_key": s("Clave de la pantalla destino")},
             ["screen_key"],
         ),
@@ -160,30 +205,51 @@ FIRST_MESSAGE = (
 )
 
 
-def agent_config(voice_id: str, prompt: str, tools: list[dict]) -> dict:
+# Palabras que el reconocimiento de voz debe esperar (marcas y servicios).
+ASR_KEYWORDS = [
+    "Wisi", "PagoDirecto", "Credirecto", "Corpoelec", "Digitel", "Movistar", "Movilnet", "CANTV",
+    "Fundana", "SenosAyuda", "bolívares", "parquímetro", "boletería", "Pago Móvil", "Humaniz",
+    "estacionamiento", "ticket", "recarga",
+]
+
+
+def agent_config(voice_id: str, prompt: str, tools: list[dict], llm: str = "gemini-2.5-flash") -> dict:
     return {
         "agent": {
             "first_message": FIRST_MESSAGE,
             "language": "es",
             "prompt": {
                 "prompt": prompt,
-                "llm": "gemini-2.0-flash",
+                "llm": llm,
                 "temperature": 0.3,
                 "tools": tools,
             },
         },
-        "tts": {"voice_id": voice_id, "model_id": TTS_MODEL},
-        "asr": {"quality": "high"},
+        # Calidad de voz: normalización de montos/fechas por ElevenLabs, menos
+        # optimización de latencia (menos artefactos) y voz estable.
+        "tts": {
+            "voice_id": voice_id,
+            "model_id": TTS_MODEL,
+            "optimize_streaming_latency": 1,
+            "stability": 0.55,
+            "similarity_boost": 0.8,
+            "speed": 1.0,
+            "text_normalisation_type": "elevenlabs",
+        },
+        "asr": {"quality": "high", "keywords": ASR_KEYWORDS},
+        "turn": {"turn_timeout": 8, "turn_eagerness": "normal"},
+        "vad": {"background_voice_detection": True},
+        "conversation": {"max_duration_seconds": 1800},
     }
 
 
 def update_agent(h: dict, agent_id: str, voice_id: str, prompt: str, tools: list[dict]) -> None:
-    r = httpx.patch(
-        f"https://api.elevenlabs.io/v1/convai/agents/{agent_id}",
-        headers=h,
-        json={"conversation_config": agent_config(voice_id, prompt, tools)},
-        timeout=60,
-    )
+    url = f"https://api.elevenlabs.io/v1/convai/agents/{agent_id}"
+    r = httpx.patch(url, headers=h, json={"conversation_config": agent_config(voice_id, prompt, tools)}, timeout=120)
+    if r.status_code == 422:  # LLM no disponible en la cuenta: el anterior funciona
+        print("  aviso:", r.text[:200])
+        cfg = agent_config(voice_id, prompt, tools, llm="gemini-2.0-flash")
+        r = httpx.patch(url, headers=h, json={"conversation_config": cfg}, timeout=120)
     r.raise_for_status()
 
 
