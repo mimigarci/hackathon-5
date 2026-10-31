@@ -1,0 +1,218 @@
+/* Credirecto — área de créditos de la webapp.
+   Identidad verde y negro del teaser «Credirecto está en camino» de Pago Directo:
+   degradado #1C1C1C → #262B12, acento lima #B8F02B, texto blanco y secundario al 70 %.
+   Regla de contraste: sobre lima solo va texto negro (nunca blanco); el lima se usa
+   como texto o relleno únicamente sobre fondos oscuros. Va después de app.css y
+   reutiliza sus variables (--gutter, --r-*, --ease-*, --t-*). */
+
+:root {
+  --cr-bg-a: #1c1c1c;
+  --cr-bg-b: #262b12;
+  --cr-lime: #b8f02b;
+  --cr-lime-press: #a3d81f;
+  --cr-on-lime: #111111;                 /* único texto permitido sobre lima */
+  --cr-ink: #ffffff;
+  --cr-ink-2: rgba(255, 255, 255, .7);   /* secundario: ≥7:1 sobre el degradado */
+  --cr-line: rgba(255, 255, 255, .14);
+  --cr-surface: rgba(255, 255, 255, .07);
+  --cr-ring: rgba(184, 240, 43, .3);
+}
+
+/* ---------------------------------------------------------------- tarjeta del Home */
+.cr-card {
+  flex: none; width: min(260px, calc(100% - 96px)); min-width: 220px; min-height: 208px;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 18px 18px 16px; border-radius: 30px; text-align: left;
+  color: var(--cr-ink);
+  background: linear-gradient(140deg, var(--cr-bg-a), var(--cr-bg-b));
+  box-shadow: var(--shadow-card), inset 0 0 0 1.5px var(--cr-ring);
+  transition: transform var(--t-press) var(--ease-out);
+}
+.cr-card:active { transform: scale(.97); }
+.cr-card .cr-k { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.cr-card .cr-k i { width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--cr-lime); color: var(--cr-on-lime); display: grid; place-items: center; }
+.cr-card .cr-k svg { width: 20px; height: 20px; }
+.cr-card small { display: block; margin-top: 14px; font-size: 14px; color: var(--cr-ink-2); }
+.cr-card .cr-avail { font-size: 25px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; white-space: nowrap; }
+.cr-card .cr-cta {
+  margin-top: auto; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 14px; border-radius: var(--r-pill);
+  background: var(--cr-lime); color: var(--cr-on-lime); font-size: 14px; font-weight: 600;
+}
+.cr-card .cr-cta svg { width: 14px; height: 14px; }
+
+/* botón de la hoja «Más» */
+.more-grid button.cr-more {
+  grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 10px;
+  background: linear-gradient(140deg, var(--cr-bg-a), var(--cr-bg-b)); color: var(--cr-ink);
+  box-shadow: inset 0 0 0 1.5px var(--cr-ring);
+}
+.more-grid button.cr-more svg { color: var(--cr-lime); }
+/* ícono del ítem del Menú */
+.menu-list .item .ic.cr-ic { color: #4d6a00; } /* lima oscuro: 5.6:1 sobre blanco */
+
+/* ---------------------------------------------------------------- pantallas */
+.screen.cr { background: linear-gradient(180deg, var(--cr-bg-a) 0%, var(--cr-bg-b) 100%); color: var(--cr-ink); }
+.cr :focus-visible { outline: 3px solid var(--cr-lime); outline-offset: 2px; }
+.cr .navbar h1 { color: var(--cr-ink); }
+.cr .navbar .circle { background: rgba(255, 255, 255, .12); color: var(--cr-ink); box-shadow: none; }
+.cr .scroll { padding-bottom: 28px; }
+.cr .sticky-cta { background: linear-gradient(to top, var(--cr-bg-b) 70%, rgba(38, 43, 18, 0)); }
+.cr .hint { color: var(--cr-ink-2); }
+.cr .empty { color: var(--cr-ink-2); padding: 28px 8px; }
+.cr .empty b { color: var(--cr-ink); }
+
+/* loader «estilo Claude» en lima */
+.cr .think .g { color: var(--cr-lime); }
+.cr .think .v { background-image: linear-gradient(90deg, var(--cr-lime) 0%, var(--cr-lime) 40%, #fff 50%, var(--cr-lime) 60%, var(--cr-lime) 100%); }
+.cr .think .m { color: var(--cr-ink-2); }
+.cr-loading { display: flex; justify-content: center; padding: 28px 0; }
+
+/* cabecera: nivel, líneas y próxima cuota */
+.cr-hero {
+  margin: 8px var(--gutter) 0; padding: 20px 18px 18px; border-radius: var(--r-lg);
+  background: linear-gradient(140deg, #232323, #2f3815);
+  box-shadow: inset 0 0 0 1.5px var(--cr-ring);
+}
+.cr-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cr-hero-top > span:last-child { font-size: 15px; font-weight: 600; color: var(--cr-ink-2); }
+.cr-badge { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: var(--r-pill); background: var(--cr-lime); color: var(--cr-on-lime); font-size: 14px; font-weight: 700; }
+.cr-lines { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+.cr-line { min-width: 0; }
+.cr-line small { display: block; font-size: 13px; color: var(--cr-ink-2); }
+.cr-line b { display: block; margin-top: 2px; font-size: 21px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.cr-line em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--cr-ink-2); }
+.cr-bar { display: block; height: 6px; margin-top: 8px; border-radius: 6px; background: var(--cr-line); overflow: hidden; }
+.cr-bar > span { display: block; height: 100%; width: var(--w, 0%); border-radius: inherit; background: var(--cr-lime); transition: width 600ms var(--ease-ios); }
+.cr-next { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--cr-line); font-size: 14.5px; color: var(--cr-ink-2); overflow-wrap: anywhere; }
+.cr-next b { color: var(--cr-ink); font-weight: 600; }
+
+/* botón grande de escaneo (negro sobre lima) */
+.cr-scan {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: calc(100% - 2 * var(--gutter)); min-height: 60px; margin: 18px var(--gutter) 0;
+  border-radius: var(--r-pill); background: var(--cr-lime); color: var(--cr-on-lime);
+  font-size: 19px; font-weight: 700; letter-spacing: -.005em;
+  box-shadow: 0 8px 22px rgba(184, 240, 43, .22);
+  transition: transform var(--t-press) var(--ease-out), background var(--t-fast);
+}
+.cr-scan svg { width: 24px; height: 24px; }
+.cr-scan:hover { background: var(--cr-lime-press); }
+.cr-scan:active { transform: scale(.97); }
+.cr-scan.loading { pointer-events: none; opacity: .85; }
+.cr-scan.loading::after { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+
+/* resultados */
+.cr-sec { padding: 0 var(--gutter); margin-top: 26px; }
+.cr-sec > h2 { font-size: 21px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 12px; }
+.cr-sum-line { font-size: 14.5px; color: var(--cr-ink-2); margin: 0 0 4px; }
+.cr-group + .cr-group { margin-top: 22px; }
+.cr-group h2 { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; font-size: 18px; font-weight: 600; }
+.cr-group h2 small { font-size: 13px; font-weight: 500; color: var(--cr-ink-2); }
+.cr-list { display: flex; flex-direction: column; gap: 10px; }
+.cr-offer {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left;
+  padding: 16px; border-radius: var(--r-md); color: var(--cr-ink);
+  background: var(--cr-surface); box-shadow: inset 0 0 0 1.5px var(--cr-line);
+  transition: transform var(--t-press) var(--ease-out), box-shadow var(--t-fast);
+}
+.cr-offer:hover { box-shadow: inset 0 0 0 1.5px var(--cr-ring); }
+.cr-offer:active { transform: scale(.98); }
+.cr-offer .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cr-partner { min-width: 0; font-size: 13px; letter-spacing: .02em; color: var(--cr-ink-2); overflow-wrap: anywhere; }
+.cr-offer .title { font-size: 17px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.cr-offer .price { font-size: 20px; font-weight: 700; color: var(--cr-lime); }
+.cr-offer .why { font-size: 14px; line-height: 1.35; color: var(--cr-ink-2); overflow-wrap: anywhere; }
+
+/* pastilla de estado: el texto siempre dice el estado, el color solo refuerza */
+.cr-pill { flex: none; display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.cr-pill.d { background: var(--cr-lime); color: var(--cr-on-lime); }
+.cr-pill.p { background: transparent; color: var(--cr-lime); box-shadow: inset 0 0 0 1.5px var(--cr-lime); }
+.cr-pill.u { background: rgba(255, 255, 255, .14); color: var(--cr-ink); }
+
+/* planes activos */
+.cr-plan { padding: 16px; border-radius: var(--r-md); background: var(--cr-surface); box-shadow: inset 0 0 0 1.5px var(--cr-line); }
+.cr-plan + .cr-plan { margin-top: 10px; }
+.cr-plan header b { display: block; font-size: 16.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.cr-plan header small { display: block; margin-top: 2px; font-size: 13.5px; color: var(--cr-ink-2); }
+.cr-inst { list-style: none; margin: 12px 0 0; padding: 0; }
+.cr-inst li { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--cr-line); font-size: 14.5px; }
+.cr-inst .n { color: var(--cr-ink-2); }
+.cr-inst em { font-style: normal; font-size: 12.5px; font-weight: 600; color: var(--cr-ink-2); }
+.cr-inst li.paid em { color: var(--cr-lime); }
+
+.cr-note { margin: 22px var(--gutter) 0; padding: 12px 14px; border-radius: var(--r-sm); background: var(--cr-surface); box-shadow: inset 0 0 0 1.5px var(--cr-line); font-size: 13.5px; line-height: 1.4; color: var(--cr-ink-2); }
+
+/* ---------------------------------------------------------------- detalle de la oferta */
+.cr-detail { margin: 8px var(--gutter) 0; padding: 20px 18px; border-radius: var(--r-lg); background: linear-gradient(140deg, #232323, #2f3815); box-shadow: inset 0 0 0 1.5px var(--cr-ring); }
+.cr-detail .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cr-detail h2 { margin-top: 10px; font-size: 22px; font-weight: 600; line-height: 1.25; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.cr-detail .txt { margin-top: 6px; font-size: 15px; line-height: 1.4; color: var(--cr-ink-2); overflow-wrap: anywhere; }
+.cr-price { margin-top: 14px; }
+.cr-price small { display: block; font-size: 13px; color: var(--cr-ink-2); }
+.cr-price b { display: block; font-size: 32px; font-weight: 700; letter-spacing: -.025em; color: var(--cr-lime); }
+.cr-reason { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cr-line); font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
+
+.cr-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.cr-opt { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); color: var(--cr-ink); font-size: 16px; font-weight: 500; box-shadow: inset 0 0 0 1.5px var(--cr-line); transition: transform var(--t-press) var(--ease-out), background var(--t-fast); }
+.cr-opt:active { transform: scale(.95); }
+.cr-opt[aria-checked="true"] { background: var(--cr-lime); color: var(--cr-on-lime); font-weight: 700; box-shadow: none; }
+.cr-freq { margin-top: 8px; font-size: 13.5px; color: var(--cr-ink-2); }
+
+.cr-quote { margin-top: 16px; }
+.cr-quote .wait, .cr-quote .bad { padding: 14px; border-radius: var(--r-sm); background: var(--cr-surface); font-size: 14.5px; color: var(--cr-ink-2); }
+.cr-sum { margin: 0; padding: 4px 16px; border-radius: var(--r-md); background: var(--cr-surface); box-shadow: inset 0 0 0 1.5px var(--cr-line); }
+.cr-sum div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--cr-line); }
+.cr-sum div:last-child { border-bottom: 0; }
+.cr-sum dt { color: var(--cr-ink-2); }
+.cr-sum dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.cr-sum .tot dd { color: var(--cr-lime); }
+.cr-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 15px; }
+.cr-table caption { text-align: left; margin-bottom: 4px; font-size: 15px; font-weight: 600; }
+.cr-table th { padding: 8px 0; text-align: left; font-size: 13px; font-weight: 500; color: var(--cr-ink-2); border-bottom: 1px solid var(--cr-line); }
+.cr-table td { padding: 11px 0; border-bottom: 1px solid var(--cr-line); }
+.cr-table th:last-child, .cr-table td:last-child { text-align: right; }
+
+.cr-precal { margin-top: 18px; padding: 18px; border-radius: var(--r-md); background: var(--cr-surface); box-shadow: inset 0 0 0 1.5px var(--cr-ring); }
+.cr-precal h3 { font-size: 18px; font-weight: 600; outline: none; }
+.cr-precal ul { margin: 6px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+.cr-precal .aviso { margin-top: 12px; font-size: 13.5px; line-height: 1.4; color: var(--cr-ink-2); }
+.cr-precal .cr-sum { margin-top: 10px; background: none; box-shadow: none; padding: 0; }
+
+.cr-go {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 56px; padding: 0 24px; border-radius: var(--r-pill);
+  background: var(--cr-lime); color: var(--cr-on-lime); font-size: 18px; font-weight: 700;
+  box-shadow: 0 8px 22px rgba(184, 240, 43, .22);
+  transition: transform var(--t-press) var(--ease-out), background var(--t-fast);
+}
+.cr-go:hover:not(:disabled) { background: var(--cr-lime-press); }
+.cr-go:active:not(:disabled) { transform: scale(.97); }
+.cr-go:disabled { background: rgba(255, 255, 255, .14); color: var(--cr-ink-2); box-shadow: none; }
+.cr-go.loading { pointer-events: none; }
+.cr-go.loading::after { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+.cr-why { margin-top: 8px; font-size: 13.5px; line-height: 1.4; text-align: center; color: var(--cr-ink-2); }
+
+@media (max-width: 360px) {
+  .cr-card { width: calc(100% - 84px); min-width: 0; }
+  .cr-lines { gap: 10px; }
+  .cr-line b { font-size: 18px; }
+  .cr-detail h2 { font-size: 20px; }
+  .cr-price b { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-bar > span { transition: none; }
+}
+
+/* ---------------------------------------------------------------- acceso al escáner (dentro de Credirecto) */
+.cr-promo {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 4px;
+  padding: 20px 18px 18px; border-radius: 28px; color: var(--cr-ink);
+  background: linear-gradient(140deg, var(--cr-bg-a), var(--cr-bg-b));
+  box-shadow: var(--shadow-card), inset 0 0 0 1.5px var(--cr-ring);
+}
+.cr-promo h3 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; color: var(--cr-ink); }
+.cr-promo p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--cr-ink-2); }
+.cr-promo .cr-go { margin-top: 12px; width: 100%; }

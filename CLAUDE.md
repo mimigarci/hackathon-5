@@ -9,4 +9,7 @@
 ## Entorno local
 - Node v18 (antiguo; npm 12 avisa de incompatibilidad). Si el stack es JS, preferir Node 22+ (nvm/fnm).
 - Python 3.12 + `uv` disponibles. Docker disponible.
-- Stack del proyecto: por definir. Actualizar esta sección al decidirlo (comandos de instalar, ejecutar y testear).
+- Stack del proyecto (detalle en README.md):
+  - `backend/` (FastAPI, `uv`): `uv pip install -e .`, `uv run uvicorn app.main:app --port 8000`, `uv run pytest -q`.
+  - `worker/` (Cloudflare Workers, Node 22): `npm install`, `npm run typecheck`, `npx wrangler deploy`.
+  - `app/` (Flutter): `flutter pub get`, `flutter run`, `flutter test`.

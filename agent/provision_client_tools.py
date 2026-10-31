@@ -186,21 +186,64 @@ def build_tools() -> list[dict]:
         client_tool(
             "open_app_screen",
             "Navega a una pantalla de la app: home, pagar_servicios, parking, escaner_qr, donaciones, "
-            "enviar_fondos, depositar, credirecto, parquimetros, seguros, boleteria, tugruero, jomi, movimientos, "
-            "mis_pagos, notificaciones, racha, mis_vehiculos, mis_cuentas, asistencia o menu.",
+            "enviar_fondos, depositar, credirecto, escanear_creditos, parquimetros, seguros, boleteria, tugruero, jomi, movimientos, "
+            "mis_pagos, notificaciones, racha, mis_vehiculos, mis_cuentas, asistencia o menu. "
+            "credirecto es tu línea de efectivo; escanear_creditos es el escáner de ofertas del ecosistema.",
             {"screen_key": s("Clave de la pantalla destino")},
             ["screen_key"],
+        ),
+        # Credirecto (simulado). El motor de reglas del gateway decide; Wisi solo
+        # muestra la decisión y su motivo. Ver docs/creditos-contrato.md.
+        client_tool(
+            "get_credit_status",
+            "Estado de Credirecto del usuario: nivel, disponible por línea, planes y próxima cuota.",
+            {},
+            [],
+        ),
+        client_tool(
+            "scan_credit_offers",
+            "Escanea los créditos posibles en todo el ecosistema: servicios, estacionamiento, boletería, "
+            "TuGruero, Seguros Mercantil, viajes de SAGA y Estei, vehículos de Conduce e inmuebles de "
+            "Propiedash. Abre la pantalla Escáner de créditos con el resultado.",
+            {},
+            [],
+        ),
+        client_tool(
+            "quote_credit",
+            "Simula las cuotas de una oferta. No guarda nada ni aprueba nada.",
+            {"offer_id": s("Identificador de la oferta del escaneo"), "installments": i("Número de cuotas")},
+            ["offer_id", "installments"],
+        ),
+        client_tool(
+            "prepare_credit_offer",
+            "Prepara el uso de Credirecto en una oferta del escáner (pisos 1 o 2). Devuelve un intent_id que el "
+            "usuario confirma en la app; NO aprueba ni mueve dinero.",
+            {"offer_id": s("Identificador de la oferta"), "installments": i("Número de cuotas")},
+            ["offer_id", "installments"],
+        ),
+        client_tool(
+            "precalify_credit",
+            "Arma una precalificación simulada para un vehículo o un inmueble (piso 3). El banco aliado "
+            "decide; no se envía nada a ningún banco.",
+            {"offer_id": s("Identificador de la oferta del piso 3")},
+            ["offer_id"],
         ),
         client_tool(
             "confirm_payment_in_app",
             "Pide a la app la confirmación segura (biometría/PIN) para un intent_id. SOLO la app ejecuta el dinero.",
             {"intent_id": s("Identificador de la intención a confirmar")},
             ["intent_id"],
+            # El usuario necesita tiempo para leer y confirmar: con 20 s Wisi daba
+            # por fallido un pago que sí salía.
+            timeout=90,
         ),
     ]
 
 
-FIRST_MESSAGE = "¡Epa! Soy Wisi. ¿Qué hacemos?"
+FIRST_MESSAGE = (
+    "¡Epa! Soy Wisi, el asistente con IA de Pago Directo. Nunca te pediré tu PIN ni te llamaré. "
+    "Pago tus servicios, escaneo tu ticket, recargo, te presto con Credirecto y te muestro tus créditos. ¿Qué hacemos?"
+)
 
 
 # Palabras que el reconocimiento de voz debe esperar (marcas y servicios).

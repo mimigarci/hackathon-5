@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=10";
+import { installFeatures } from "./features.js?v=14";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -68,6 +68,8 @@ const PHRASES = {
   think: ["Pensando", "Echando números", "Revisando tu wallet", "Wisificando", "Cuadrando la jugada", "Preparando todo"],
   pay: ["Verificando tu huella", "Firmando la operación", "Moviendo los bolívares", "Asentando el pago"],
   voice: ["Despertando a Wisi", "Calentando la voz", "Afinando el micrófono", "Conectando"],
+  credit: ["Revisando tu historial", "Consultando aliados", "Cuadrando cuotas", "Midiendo tu línea", "Buscando ofertas para ti"],
+  mic: ["Esperando permiso del micrófono"],
 };
 function makeThink(kind, { dark = false, cancellable = false } = {}) {
   const el = document.createElement("span");
@@ -305,7 +307,7 @@ function paintHomeServices() {
 }
 
 // --- movimientos
-const KIND_ICON = { donation: "#i-heart", credit: "#i-bank", credit_payment: "#i-bank", insurance: "#i-shield", tickets: "#i-ticket", welcome: "#i-bank", tow_plan: "#i-car" };
+const KIND_ICON = { donation: "#i-heart", credit: "#i-bank", credit_payment: "#i-bank", insurance: "#i-shield", tickets: "#i-ticket", welcome: "#i-bank", tow_plan: "#i-car", credit_offer: "#i-credit" };
 const KIND_IMG = { payment: "services_icon", parking: "parking_icon", parking_meter: "parking_meter_icon", transfer: "transfers_icon", topup: "recharge_icon" };
 let movFilter = "all";
 function moveRow(m) {
@@ -531,6 +533,282 @@ SCREENS.ticket = {
 };
 $("tkPay").addEventListener("click", () => tkCtx?.intent_id && confirmOp(tkCtx.intent_id, "ui"));
 
+// ============================================================ Credirecto (créditos simulados)
+// Contrato del backend: docs/creditos-contrato.md. La app solo muestra lo que decide el
+// motor del Worker (con su motivo); el dinero se mueve únicamente con la hoja de huella.
+const credit = { status: null, failed: false, offers: [], summary: null, scanning: null, offer: null, n: null, quote: null, quoting: false, bound: null, seq: 0 };
+const PISOS = { 1: ["Día a día", "Con Pago Directo"], 2: ["Viajes", "Con inicial y tope"], 3: ["Carro y casa", "Con banco aliado"] };
+const PILL = { disponible: ["d", "Disponible"], precalificado: ["p", "Precalificado"], por_desbloquear: ["u", "Por desbloquear"] };
+const FREQ = { semanal: "semanales", quincenal: "quincenales", mensual: "mensuales" };
+/** Crea un elemento con texto plano (nunca innerHTML con datos de la API). */
+const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const money = (minor, cur) => (cur === "USD" ? "US$ " : "Bs ") + fmt.format(Number(minor || 0) / 100);
+function crDate(v) {
+  let d;
+  if (typeof v === "number") d = new Date(v < 1e12 ? v * 1000 : v);
+  else { const m = String(v ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/); d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(v); } // sin desfase de zona
+  return d && !isNaN(d) ? d.toLocaleDateString("es-VE", { day: "numeric", month: "short" }) : String(v ?? "—");
+}
+function paintPill(el, st) { const [c, t] = PILL[st] || ["u", st || "—"]; el.className = "cr-pill " + c; el.textContent = t; }
+function sumList(rows) {
+  const dl = mk("dl", "cr-sum");
+  for (const [a, b, c] of rows) { const d = mk("div", c); d.append(mk("dt", null, a), mk("dd", "num", b)); dl.append(d); }
+  return dl;
+}
+
+// --- estado de la línea y planes
+function paintCredit() {
+  const s = credit.status, d = s?.lines?.cotidiano, t = s?.lines?.turismo;
+  $("crLevel").textContent = s?.level ? `Nivel ${s.level}` : "Nivel —";
+  const line = (l, a, b, c) => {
+    $(a).textContent = l ? bs(l.available_minor) : "—";
+    $(c).textContent = l ? `de ${bs(l.limit_minor)}` : "";
+    $(b).style.setProperty("--w", l && l.limit_minor > 0 ? `${Math.max(0, Math.min(100, (l.available_minor / l.limit_minor) * 100))}%` : "0%");
+  };
+  line(d, "crDaily", "crDailyBar", "crDailyOf"); line(t, "crTrip", "crTripBar", "crTripOf");
+  const n = s?.next_installment, box = $("crNext");
+  box.replaceChildren();
+  if (!s) box.textContent = credit.failed ? "No pudimos consultar tu línea. Revisa tu conexión." : "Consultando tu línea…";
+  else if (!n) box.textContent = "No tienes cuotas pendientes.";
+  else box.append("Próxima cuota: ", mk("b", null, `${bs(n.amount_minor)} · ${crDate(n.due_date)}`), ` · ${n.title ?? ""}`);
+  paintPlans();
+}
+function paintPlans() {
+  const host = $("crPlans"), plans = credit.status?.plans ?? [];
+  if (!plans.length) {
+    const e = mk("div", "empty");
+    e.append(mk("b", null, "Aún no tienes planes activos"), "Cuando uses Credirecto, tus cuotas aparecen aquí.");
+    return host.replaceChildren(e);
+  }
+  host.replaceChildren(...plans.map((p) => {
+    const a = mk("article", "cr-plan"), h = mk("header");
+    h.append(mk("b", null, p.title), mk("small", null, `${p.partner} · Financiado ${bs(p.financed_minor)}`));
+    const ul = mk("ul", "cr-inst");
+    ul.setAttribute("aria-label", `Cuotas de ${p.title}`);
+    for (const i of p.installments ?? []) {
+      const li = mk("li", i.paid ? "paid" : "");
+      li.append(mk("span", "n", String(i.n)), mk("span", null, crDate(i.due_date)), mk("span", "num", bs(i.amount_minor)), mk("em", null, i.paid ? "Pagada" : "Pendiente"));
+      ul.append(li);
+    }
+    a.append(h, ul);
+    return a;
+  }));
+}
+async function refreshCredit() {
+  try {
+    const r = await callTool("get_credit_status");
+    if (r.status === "ok" && r.data) { credit.status = r.data; credit.failed = false; } else credit.failed = !credit.status;
+    paintCredit();
+    return r;
+  } catch {
+    credit.failed = !credit.status; paintCredit();
+    return { status: "error", speech: "No pude consultar tu línea de crédito." };
+  }
+}
+
+// --- escaneo y ofertas
+function offerCard(o) {
+  const b = mk("button", "cr-offer");
+  b.type = "button";
+  const top = mk("span", "top"), pill = mk("span", "cr-pill");
+  paintPill(pill, o.status);
+  top.append(mk("span", "cr-partner", o.partner), pill);
+  b.append(top, mk("b", "title", o.title), mk("span", "price num", money(o.price_minor, o.currency)), mk("span", "why", o.reason));
+  b.onclick = () => push("croffer", { offer_id: o.offer_id });
+  return b;
+}
+function paintOffers() {
+  const host = $("crResults"), offers = credit.offers;
+  host.removeAttribute("aria-busy");
+  if (!offers.length) {
+    const e = mk("div", "empty");
+    e.append(mk("b", null, "Escanea para ver tus créditos"), "Revisamos tu historial y a los aliados, y te mostramos qué puedes financiar.");
+    return host.replaceChildren(e);
+  }
+  const sm = credit.summary, parts = [];
+  if (sm) parts.push(mk("p", "cr-sum-line", `${sm.disponible ?? 0} disponibles · ${sm.precalificado ?? 0} precalificadas · ${sm.por_desbloquear ?? 0} por desbloquear`));
+  for (const piso of [1, 2, 3]) {
+    const list = offers.filter((o) => o.piso === piso);
+    if (!list.length) continue;
+    const g = mk("section", "cr-group"), h = mk("h2", null, PISOS[piso][0]), box = mk("div", "cr-list");
+    h.append(mk("small", null, PISOS[piso][1]));
+    box.append(...list.map(offerCard));
+    g.append(h, box);
+    parts.push(g);
+  }
+  host.replaceChildren(...parts);
+}
+async function fetchOffers({ paint = true } = {}) {
+  const res = await callTool("scan_credit_offers");
+  if (res.status === "ok" && Array.isArray(res.data?.offers)) {
+    credit.offers = res.data.offers; credit.summary = res.data.summary || null;
+    if (paint && !credit.scanning) paintOffers();
+  }
+  return res;
+}
+const ensureOffers = async () => { if (!credit.offers.length) await fetchOffers(); };
+/** Muestra el loader, consulta al motor y pinta las ofertas por piso. Devuelve la respuesta. */
+function scanCredit() {
+  if (credit.scanning) return credit.scanning;
+  const btn = $("crScan"), host = $("crResults");
+  btn.classList.add("loading"); btn.setAttribute("aria-busy", "true");
+  const t = makeThink("credit", { dark: true });
+  const wrap = mk("div", "cr-loading");
+  wrap.append(t.el);
+  host.replaceChildren(wrap); host.setAttribute("aria-busy", "true");
+  credit.scanning = (async () => {
+    let res;
+    try { [res] = await Promise.all([fetchOffers({ paint: false }), sleep(reduced ? 0 : 1400)]); }
+    catch { res = { status: "error", speech: "No pude escanear tus créditos ahora. Inténtalo otra vez." }; }
+    t.stop(); credit.scanning = null;
+    btn.classList.remove("loading"); btn.removeAttribute("aria-busy");
+    paintOffers();
+    if (res.status !== "ok") toast(res.speech || "No pudimos escanear tus créditos. Inténtalo otra vez.");
+    return res;
+  })();
+  return credit.scanning;
+}
+SCREENS.crscan = {
+  enter() { paintCredit(); if (!credit.scanning) paintOffers(); refreshCredit(); },
+};
+$("crScan").addEventListener("click", () => { haptic(10); scanCredit(); });
+
+// --- detalle de la oferta: cuotas, cotización y CTA
+const optLabel = (o, n) => (o.piso === 3 ? `${n} meses` : `${n} ${n === 1 ? "cuota" : "cuotas"}`);
+function paintOpts(o, opts) {
+  $("coOpts").replaceChildren(...opts.map((n) => {
+    const b = mk("button", "cr-opt", optLabel(o, n));
+    b.type = "button"; b.dataset.n = n;
+    b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(n === credit.n));
+    b.onclick = () => pickInstallments(n);
+    return b;
+  }));
+  $("coFreq").textContent = FREQ[o.frequency] ? `Cuotas ${FREQ[o.frequency]}` : "";
+}
+function pickInstallments(n) {
+  if (n === credit.n) return;
+  credit.n = n; haptic(6);
+  for (const b of $$(".cr-opt", $("coOpts"))) b.setAttribute("aria-checked", String(Number(b.dataset.n) === n));
+  requote();
+}
+function paintQuote(q) {
+  const cur = q.currency || credit.offer?.currency, parts = [], inst = q.installments ?? [];
+  if (q.eligible === false) {
+    parts.push(mk("p", "bad", q.reason || "Todavía no cumples los requisitos de esta oferta."));
+  } else {
+    const rows = [["Inicial hoy", money(q.down_payment_minor, cur)], ["Financiado", money(q.financed_minor, cur)]];
+    if (inst.length > 12) rows.push(["Cuota estimada", `${money(inst[0].amount_minor, cur)} al mes`]); // plazos largos: sin tabla
+    rows.push(["Intereses", q.interest_minor ? money(q.interest_minor, cur) : "Sin intereses (demo)"], ["Total", money(q.total_minor, cur), "tot"]);
+    parts.push(sumList(rows));
+    if (inst.length && inst.length <= 12) {
+      const tb = mk("table", "cr-table"), cap = mk("caption", null, "Tus cuotas"), hd = mk("thead"), hr = mk("tr"), body = mk("tbody");
+      for (const c of ["N.º", "Fecha", "Monto"]) { const th = mk("th", null, c); th.scope = "col"; hr.append(th); }
+      hd.append(hr);
+      for (const c of inst) { const tr = mk("tr"); tr.append(mk("td", "num", String(c.n)), mk("td", null, crDate(c.due_date)), mk("td", "num", money(c.amount_minor, cur))); body.append(tr); }
+      tb.append(cap, hd, body);
+      parts.push(tb);
+    }
+  }
+  $("coQuote").replaceChildren(...parts);
+}
+async function requote() {
+  const o = credit.offer, n = credit.n, box = $("coQuote"), my = ++credit.seq;
+  credit.quote = null; credit.quoting = true; paintCreditCta();
+  box.replaceChildren(mk("p", "wait", "Calculando tus cuotas…"));
+  try {
+    const r = await callTool("quote_credit", { offer_id: o.offer_id, installments: n });
+    if (my !== credit.seq) return;
+    if (r.status === "ok" && r.data) { credit.quote = r.data; paintQuote(r.data); }
+    else box.replaceChildren(mk("p", "bad", r.speech || r.error?.message || "No pudimos calcular las cuotas."));
+  } catch {
+    if (my !== credit.seq) return;
+    box.replaceChildren(mk("p", "bad", "No pudimos calcular las cuotas. Revisa tu conexión."));
+  }
+  credit.quoting = false; paintCreditCta();
+}
+function paintCreditCta() {
+  const o = credit.offer, go = $("coGo"), why = $("coWhy");
+  if (!o) return;
+  go.classList.remove("loading");
+  if (o.next_step === "subir_nivel") {
+    go.disabled = true; go.textContent = "Aún no disponible";
+    why.textContent = o.reason || "Todavía no cumples los requisitos de esta oferta.";
+    return;
+  }
+  const no = credit.quote?.eligible === false;
+  go.disabled = no || credit.quoting;
+  go.textContent = o.next_step === "precalificar" ? "Precalificar con el banco" : "Usar Credirecto";
+  why.textContent = no ? credit.quote.reason || "Todavía no cumples los requisitos." : o.next_step === "precalificar" ? "Pago Directo no presta: arma tu solicitud para el banco aliado." : "Confirmas con tu huella. La inicial, si hay, sale de tu Wallet.";
+}
+SCREENS.croffer = {
+  async enter(p = {}) {
+    credit.bound = p.intent_id ? { intent_id: p.intent_id, offer_id: p.offer_id, n: p.installments } : null;
+    let o = credit.offers.find((x) => x.offer_id === p.offer_id);
+    if (!o) { try { await ensureOffers(); } catch {} o = credit.offers.find((x) => x.offer_id === p.offer_id); }
+    if (!o) { toast("No encontré esa oferta."); if (stack.at(-1) === "croffer") pop(); return; }
+    credit.offer = o; credit.quote = null; credit.quoting = false; credit.seq++;
+    $("coPrecal").hidden = true; $("coPrecal").replaceChildren();
+    paintPill($("coPill"), o.status);
+    $("coPartner").textContent = o.funder ? `${o.partner} · Presta ${o.funder}` : o.partner;
+    $("coTitle").textContent = o.title;
+    $("coDetail").textContent = o.detail || "";
+    $("coPrice").textContent = money(o.price_minor, o.currency);
+    $("coReason").textContent = o.reason || "";
+    $("coOptsLbl").textContent = o.piso === 3 ? "¿A cuántos meses?" : "¿En cuántas cuotas?";
+    const opts = Array.isArray(o.installments_options) ? o.installments_options : [];
+    const canQuote = o.next_step !== "subir_nivel" && opts.length > 0;
+    $("coPlanSec").hidden = !canQuote;
+    credit.n = opts.includes(p.installments) ? p.installments : opts[0] ?? null;
+    paintOpts(o, opts);
+    $("coQuote").replaceChildren();
+    $("s-croffer").querySelector(".scroll").scrollTop = 0;
+    paintCreditCta();
+    if (canQuote) requote();
+  },
+};
+function paintPrecal(d) {
+  const host = $("coPrecal"), name = (x) => (typeof x === "string" ? x : x?.name ?? x?.bank ?? x?.label ?? "");
+  const box = mk("div", "cr-precal"), h = mk("h3", null, "Tu precalificación");
+  h.tabIndex = -1;
+  const banks = (d.bank_options ?? []).map(name).filter(Boolean), docs = (d.documents ?? []).map(name).filter(Boolean);
+  const rows = [];
+  if (d.request_ref) rows.push(["Solicitud", d.request_ref]);
+  rows.push([banks.length > 1 ? "Bancos aliados" : "Banco aliado", banks.join(" o ") || "—"]);
+  if (d.estimated?.down_payment_pct != null) rows.push(["Inicial estimada", `${d.estimated.down_payment_pct} %`]);
+  if (d.estimated?.term_months != null) rows.push(["Plazo estimado", `${d.estimated.term_months} meses`]);
+  box.append(h, sumList(rows));
+  if (docs.length) {
+    const ul = mk("ul");
+    ul.append(...docs.map((x) => mk("li", null, x)));
+    box.append(mk("p", "aviso", "Documentos que te pedirán:"), ul);
+  }
+  box.append(mk("p", "aviso", "Simulación: no se envió nada a ningún banco. Los montos y plazos son referenciales."));
+  host.replaceChildren(box); host.hidden = false;
+  h.focus({ preventScroll: true });
+  host.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+}
+$("coGo").addEventListener("click", async () => {
+  const o = credit.offer, btn = $("coGo");
+  if (!o || btn.disabled || btn.classList.contains("loading")) return;
+  if (o.next_step === "usar") {
+    const b = credit.bound;
+    if (b && b.offer_id === o.offer_id && b.n === credit.n) return confirmOp(b.intent_id, "ui");
+    // prepare_credit_offer -> registerOp -> hoja de huella (runPrepare hace los tres pasos)
+    return runPrepare("prepare_credit_offer", { offer_id: o.offer_id, installments: credit.n }, btn);
+  }
+  if (o.next_step === "precalificar") {
+    btn.classList.add("loading");
+    try {
+      const r = await callTool("precalify_credit", { offer_id: o.offer_id });
+      if (r.status === "ok" && r.data) paintPrecal(r.data);
+      else toast(r.speech || r.error?.message || "No pudimos precalificarte ahora.");
+    } catch { toast("Sin conexión con PagoDirecto. Inténtalo de nuevo."); }
+    finally { btn.classList.remove("loading"); }
+  }
+});
+/** Tras confirmar un crédito: las ofertas cambian (usas línea), así que se vuelven a consultar. */
+function creditUsed() { credit.offers = []; credit.summary = null; paintOffers(); refreshCredit(); }
+
 // --- éxito
 const DONE = {
   payment: (s) => ["Pago realizado", `Pago ${s.service ?? "de servicio"}`],
@@ -538,6 +816,7 @@ const DONE = {
   donation: (s) => ["¡Gracias por donar!", `Donación a ${s.foundation ?? ""}`],
   transfer: (s) => ["Envío realizado", `Enviado a ${s.recipient_ref ?? ""}`],
   topup: (s) => ["Recarga exitosa", `${s.method ?? "Wallet"} · +50 pts del Club`],
+  credit_offer: (s) => ["Credirecto activado", `${s.title ?? "Tu crédito"} · ${s.installments ?? ""} ${s.installments === 1 ? "cuota" : "cuotas"}. Inicial hoy: ${bs(s.amount_minor ?? 0)}.`],
   credit: (s) => ["Crédito en tu wallet", `Credirecto · ${s.installments ?? 4} cuotas de ${bs(s.installment_minor ?? 0)}`],
   credit_payment: () => ["Abono realizado", "Credirecto"],
   parking_meter: (s) => ["Parquímetro activo", `${s.product ?? ""} · ${s.quantity ?? 1} h · ${s.plate ?? ""}`],
@@ -548,7 +827,8 @@ const DONE = {
 function showDone(op, res) {
   const [title, what] = (DONE[op.kind] || (() => ["¡Listo!", ""]))(op.s);
   $("doneTitle").textContent = title;
-  $("doneAmt").textContent = op.s.amount_minor != null ? bs(op.s.amount_minor) : "";
+  const big = op.kind === "credit_offer" ? op.s.financed_minor : op.s.amount_minor; // en crédito se destaca lo financiado
+  $("doneAmt").textContent = big != null ? bs(big) : "";
   $("doneWhat").textContent = what;
   const rows = [["Referencia", res.data?.operation_ref ?? "—"], ["Fecha", new Date().toLocaleString("es-VE", { dateStyle: "medium", timeStyle: "short" })], ["Comisión", bs(0)], ["Nuevo saldo", bs(res.data?.balance_minor ?? state.balance)]];
   $("doneList").replaceChildren(...rows.map(([a, b]) => { const d = document.createElement("div"); d.innerHTML = "<dt></dt><dd class='num'></dd>"; d.children[0].textContent = a; d.children[1].textContent = b; return d; }));
@@ -754,6 +1034,7 @@ const KIND = {
   prepare_donation: { kind: "donation", t: (s) => `Donación a ${s.foundation ?? ""}`, sub: () => "Aporte solidario" },
   prepare_transfer: { kind: "transfer", t: (s) => `Envío a ${s.recipient_ref ?? ""}`, sub: () => "Wallet a wallet" },
   prepare_topup: { kind: "topup", t: (s) => `Recarga · ${s.method ?? "Wallet"}`, sub: () => "Llega al instante a tu wallet" },
+  prepare_credit_offer: { kind: "credit_offer", ic: "#i-credit", t: (s) => `Credirecto · ${s.title ?? "crédito"}`, sub: (s) => `Financias ${bs(s.financed_minor)} en ${s.installments ?? "—"} ${s.installments === 1 ? "cuota" : "cuotas"}` },
   prepare_credit: { kind: "credit", t: () => "Credirecto a tu wallet", sub: (s) => `${s.installments ?? 4} cuotas de ${bs(s.installment_minor ?? 0)}` },
   prepare_credit_payment: { kind: "credit_payment", t: () => "Abono a Credirecto", sub: () => "Desde tu wallet" },
   prepare_purchase: { t: (s) => `${PURCHASE_NAME[PURCHASE_KIND[s.section]] ?? "Compra"} · ${s.product ?? ""}`, sub: QTY_LABEL },
@@ -793,6 +1074,10 @@ function showOpInApp(op) {
     }
     case "transfer":
       push("send", { recipient_ref: s.recipient_ref, amount_minor: s.amount_minor, intent_id: op.id });
+      break;
+    case "credit_offer":
+      if (!stack.includes("crscan")) push("crscan");
+      push("croffer", { offer_id: s.offer_id, installments: s.installments, intent_id: op.id });
       break;
     case "topup":
       push("deposit", { method: op.params?.method ?? "pago_movil", amount_minor: s.amount_minor, intent_id: op.id });
@@ -865,10 +1150,14 @@ function askApproval(op) {
     const amt = op.s.amount_minor;
     $("cfSub").textContent = op.k.t(op.s);
     $("cfAmt").textContent = amt != null ? bs(amt) : "";
-    const short = !SUMS_TO_WALLET.has(op.kind) && state.balance != null && amt != null && amt > state.balance;
+    // En crédito, amount_minor es la inicial y puede ser 0: con 0 nunca hay saldo insuficiente.
     const adds = SUMS_TO_WALLET.has(op.kind);
-    const rows = [["Concepto", op.k.t(op.s)], ...(op.k.sub(op.s) ? [["Detalle", op.k.sub(op.s)]] : []), ["Comisión", bs(0)], [adds ? "Hacia" : "Desde", "Wallet PagoDirecto"]];
-    if (state.balance != null && amt != null) rows.push([short ? "Saldo disponible" : "Saldo después", bs(short ? state.balance : state.balance + (adds ? amt : -amt))]);
+    const short = !adds && state.balance != null && amt > 0 && amt > state.balance;
+    const isCredit = op.kind === "credit_offer";
+    const rows = isCredit
+      ? [["Concepto", op.k.t(op.s)], ["Inicial hoy", bs(amt ?? 0)], ["Financiado", bs(op.s.financed_minor)], ["Cuotas", String(op.s.installments ?? "—")], ["Aliado", op.s.partner ?? "—"], ["Comisión", bs(0)], ...(amt > 0 ? [["Desde", "Wallet PagoDirecto"]] : [])]
+      : [["Concepto", op.k.t(op.s)], ...(op.k.sub(op.s) ? [["Detalle", op.k.sub(op.s)]] : []), ["Comisión", bs(0)], [adds ? "Hacia" : "Desde", "Wallet PagoDirecto"]];
+    if (state.balance != null && amt != null && (!isCredit || amt > 0)) rows.push([short ? "Saldo disponible" : "Saldo después", bs(short ? state.balance : state.balance + (adds ? amt : -amt))]);
     $("cfList").replaceChildren(...rows.map(([a, b]) => { const d = document.createElement("div"); d.innerHTML = "<dt></dt><dd class='num'></dd>"; d.children[0].textContent = a; d.children[1].textContent = b; return d; }));
     ok.className = "bio"; ok.disabled = short;
     $("cfOkTxt").textContent = short ? "Saldo insuficiente" : "Confirmar con huella";
@@ -913,6 +1202,7 @@ function paramsOf(op) {
     case "payment": return { service_ref: state.services.find((x) => x.name === s.service)?.service_ref, account_number: s.account_number, amount_minor: s.amount_minor };
     case "donation": return { foundation_ref: state.foundations.find((x) => x.name === s.foundation)?.foundation_ref, amount_minor: s.amount_minor };
     case "transfer": return { recipient_ref: s.recipient_ref, amount_minor: s.amount_minor, kind: s.kind || "p2p" };
+    case "credit_offer": return { offer_id: s.offer_id, installments: s.installments };
     case "parking_meter": case "insurance": case "tickets": case "tow_plan": return { product_ref: s.product_ref, quantity: s.quantity, plate: s.plate };
   }
   return null;
@@ -927,7 +1217,7 @@ async function freshOp(op) {
   if (state.resume === op.id) state.resume = fresh.id;
   // La UI sigue apuntando a la operación vigente.
   if (tkCtx?.intent_id === op.id) tkCtx.intent_id = fresh.id;
-  for (const c of [state.payBound, donCtx.bound, sendCtx.bound]) if (c?.intent_id === op.id) c.intent_id = fresh.id;
+  for (const c of [state.payBound, donCtx.bound, sendCtx.bound, credit.bound]) if (c?.intent_id === op.id) c.intent_id = fresh.id;
   return fresh;
 }
 async function confirmOp(id, source) {
@@ -956,6 +1246,7 @@ async function confirmOp(id, source) {
       op.result = res; op.state = "done";
       setBalance(res.data?.balance_minor, true);
       if (op.kind === "topup") addPoints(50);
+      if (op.kind === "credit_offer" || op.kind === "credit" || op.kind === "credit_payment") creditUsed(); // el escáner vuelve a cotizar con la línea nueva
       haptic([10, 40, 10]); wink();
       showDone(op, res);
       ctx.refreshCredit?.();
@@ -1106,7 +1397,7 @@ function hideThinking() { if (!thinkRow) return; thinkRow.stop(); thinkRow.row.r
 // Botones prearmados: siempre a mano y, si Wisi pregunta, primero Sí y No.
 const QUICK = [
   ["Mi saldo", "¿Cuál es mi saldo?"], ["Escanear ticket", "Escanea el QR de mi ticket de estacionamiento"], ["Pagar la luz", "Quiero pagar la luz de Corpoelec"],
-  ["Recargar", "Quiero recargar mi wallet"], ["Credirecto", "¿Cuánto tengo disponible en Credirecto?"], ["Movimientos", "Muéstrame mis movimientos"],
+  ["Recargar", "Quiero recargar mi wallet"], ["Credirecto", "¿Cuánto tengo disponible en Credirecto?"], ["Mis créditos", "Escanea mis créditos"], ["Movimientos", "Muéstrame mis movimientos"],
   ["Parquímetro", "Quiero pagar un parquímetro"], ["Seguros", "Quiero ver los seguros"], ["TuGruero", "Quiero un plan de TuGruero"], ["Enviar", "Quiero enviar dinero"], ["Donar", "Quiero hacer una donación"],
 ];
 function paintChips(asked = false) {
@@ -1179,6 +1470,7 @@ const SCREEN_MAP = {
   asistencia: () => { go("home"); push("help"); },
   tugruero: () => { go("home"); push("tugruero"); },
   jomi: () => { go("home"); push("jomi"); },
+  escanear_creditos: () => { go("home"); push("crscan"); },
 };
 const CATALOG_SCREEN = { parquimetros: "meter", seguros: "insurance", boleteria: "tickets", tugruero: "tugruero" };
 const prep = (name) => async (p) => {
@@ -1212,6 +1504,21 @@ const clientTools = {
   get_credit: async () => {
     const res = await callTool("get_credit");
     driveApp(); go("home"); push("credit");
+    return JSON.stringify(res);
+  },
+  // Credirecto: el motor del Worker decide; la app solo muestra y pide la huella.
+  get_credit_status: async () => JSON.stringify(await refreshCredit()),
+  scan_credit_offers: async () => { driveApp(); push("crscan"); return JSON.stringify(await scanCredit()); },
+  quote_credit: async (p) => JSON.stringify(await callTool("quote_credit", p)),
+  prepare_credit_offer: prep("prepare_credit_offer"),
+  precalify_credit: async (p) => {
+    const res = await callTool("precalify_credit", p);
+    if (res.status === "ok" && res.data) {
+      driveApp(); if (!stack.includes("crscan")) push("crscan");
+      push("croffer", { offer_id: p?.offer_id });
+      for (let i = 0; i < 12 && credit.offer?.offer_id !== p?.offer_id; i++) await sleep(250); // enter() puede esperar al escaneo
+      if (credit.offer?.offer_id === p?.offer_id) paintPrecal(res.data);
+    }
     return JSON.stringify(res);
   },
   scan_parking_qr: async () => {
@@ -1398,7 +1705,17 @@ async function startVoice(reconnecting = false) {
   let preflight = null;
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error(location.protocol === "https:" || location.hostname === "localhost" ? "Tu navegador no permite el micrófono" : "El micrófono requiere HTTPS");
-    preflight = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const ask = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    // Si el navegador va a mostrar su aviso, explicamos por qué antes de conectar.
+    let asked = false;
+    if (!reconnecting) navigator.permissions?.query({ name: "microphone" }).then((p) => {
+      if (p.state !== "prompt" || preflight) return;
+      asked = true;
+      thinkRow?.set("mic");
+      toast("Wisi necesita tu micrófono: acepta el permiso del navegador", 6000);
+    }).catch(() => {});
+    preflight = await ask;
+    if (asked) { toast("Micrófono listo"); thinkRow?.set("voice"); }
     await openConv("voice");
     hideThinking();
     completeTask("wisi");
@@ -1492,14 +1809,127 @@ async function handleLocal(text) {
   if (/hola|buen|hey|epa/.test(t)) return say("¡Epa! ¿Qué hacemos hoy? Escaneo tu ticket, pago servicios, dono o envío fondos.");
   say("Puedo pagar tu estacionamiento, parquímetro y servicios, recargar tu wallet, pedir Credirecto, comprar seguros y boletos, donar o enviar fondos. ¿Qué necesitas?");
 }
+// ============================================================ cerebro de Wisi por niveles
+// Normas completas en docs/wisi-cerebro.md: resolver con el nivel más barato que acierte.
+//   N0 reglas locales (aquí, 0 costo) -> N1/N2 /api/brain (Worker, OpenRouter) -> N3 agente de voz.
+// Ningún modelo decide dinero ni crédito: solo elige la acción; el usuario confirma con su huella.
+const CREDIT_STRONG = /credit|credirecto|cuota|financ|prestamo|hipoteca/;
+const CREDIT_WEAK = /\bcarro\b|vehiculo|viaje|roques|margarita|merida|\bsaga\b|estei|conduce|propiedash|tugruero|mercantil|\bseguros?\b/;
+// «Escanea mis créditos» y los nombres de aliados van al escáner; «mi Credirecto» o «cuánto debo», a la línea de la wallet.
+const CREDIT_SCAN = /escane|escaneo|revisa|busca|ofertas|que (puedo|credito)|cuanto (puedo|me)/;
+const CREDIT_WALLET = /cuanto debo|deuda|mi credirecto|mi linea|abonar|abono/;
+const OTHER_FLOW = /estacionamiento|parking|ticket|saldo|movimiento|historial|don(a|ar|aci)|envi|transfer|corpoelec|digitel|movistar|movilnet|cantv|\bluz\b/;
+const CREDIT_OFFERS = [
+  [/roques/, "saga_roques"], [/merida/, "saga_merida"], [/margarita|estei/, "estei_margarita"],
+  [/propiedash|hipoteca|apartamento|\bcasa\b|inmueble/, "propiedash_apto"], [/tugruero|\bgrua\b/, "tugruero_plan"],
+  [/\bseguros?\b|\brcv\b|mercantil/, "mercantil_rcv"], [/conduce|vehiculo|\bcarro\b|corolla/, "conduce_corolla"],
+  [/condominio/, "svc_condominio"], [/cantv|internet/, "svc_cantv"], [/estacionamiento|parking/, "park_month"], [/concierto|poliedro|entrada/, "event_ticket"],
+];
+const NEXT_HINT = { usar: "Toca «Usar Credirecto» y confirma con tu huella.", precalificar: "Toca «Precalificar» para armar tu solicitud.", subir_nivel: "Todavía no la tienes disponible." };
+
+/** Abre la oferta pedida (por id o por vertical) y la explica con el motivo del motor. */
+async function openCreditOffer({ offer_id, vertical } = {}, reply) {
+  showThinking();
+  try { await ensureOffers(); } catch { hideThinking(); return say("Credirecto no responde ahora mismo. Inténtalo en un momento."); }
+  const o = credit.offers.find((x) => (offer_id ? x.offer_id === offer_id : x.vertical === vertical));
+  if (!o) { driveApp(); push("crscan"); return say(reply || "No encontré esa oferta. Escanea tus créditos y te muestro lo que tienes disponible."); }
+  driveApp();
+  if (!stack.includes("crscan")) push("crscan");
+  push("croffer", { offer_id: o.offer_id });
+  say(reply || `${o.title}: ${o.reason} ${NEXT_HINT[o.next_step] ?? ""}`.trim());
+}
+/** Abre Credirecto; con scanIt además escanea y resume lo que encontró. */
+async function openCreditHome(scanIt, reply) {
+  driveApp(); push("crscan");
+  if (scanIt) {
+    const res = await scanCredit();
+    return say(reply || (res.status === "ok" ? res.speech : null) || "No pude escanear tus créditos ahora. Inténtalo otra vez.");
+  }
+  const r = await refreshCredit(), d = credit.status?.lines?.cotidiano;
+  say(reply || (r.status === "ok" && d ? `Tu línea del día a día tiene ${bs(d.available_minor)} disponibles. Toca «Escanear mis créditos» y te muestro ofertas.` : "Abrí Credirecto. Toca «Escanear mis créditos» para ver ofertas."));
+}
+/** «Mi Credirecto»: la línea de efectivo de la wallet (la pantalla de David), no el escáner. */
+async function openWalletCredit() {
+  showThinking();
+  const r = await callTool("get_credit");
+  driveApp(); go("home"); push("credit");
+  say(r.speech);
+}
+/** N0: crédito por reglas. Devuelve true si lo resolvió (sin modelo). */
+async function creditN0(text) {
+  const t = norm(text);
+  const strong = CREDIT_STRONG.test(t);
+  // «seguro» como adjetivo («es seguro») no cuenta; las palabras débiles ceden ante los flujos que ya existen.
+  const weak = CREDIT_WEAK.test(t.replace(/\b(es|esta|estoy|estas|ser|muy|mas|no|tan) seguro\b/g, "")) && !OTHER_FLOW.test(t);
+  const wallet = CREDIT_WALLET.test(t) && !CREDIT_SCAN.test(t);
+  if (!strong && !weak && !wallet) return false;
+  try {
+    const rule = CREDIT_OFFERS.find(([re]) => re.test(t));
+    if (rule) await openCreditOffer({ offer_id: rule[1] });
+    else if (CREDIT_SCAN.test(t) || (weak && !wallet)) await openCreditHome(CREDIT_SCAN.test(t));
+    else await openWalletCredit();
+  } catch { hideThinking(); add("err", "No pude abrir Credirecto. Inténtalo de nuevo."); }
+  return true;
+}
+let brainOff = false; // si /api/brain responde 404 (backend sin desplegar), no se vuelve a intentar
+/** N1/N2: pregunta al Worker qué acción corresponde. false = seguir con el agente y el resolvedor local. */
+async function brainRoute(text) {
+  if (conv || brainOff) return false;
+  let data;
+  try {
+    showThinking();
+    const res = await api("/api/brain", { body: { text, screen: stack.at(-1) || tab } });
+    data = res?.status === "ok" || res?.status == null ? res?.data : null;
+  } catch (e) { if (e.status === 404) brainOff = true; return false; }
+  if (!data?.action || data.action === "conversar") return false;
+  const p = data.params || {};
+  try {
+    hideThinking();
+    if (data.reply && !data.action.startsWith("credit")) say(data.reply); // las de crédito lo dicen ellas
+    switch (data.action) {
+      case "saldo": { const r = await refreshBalance(true); if (!data.reply) say(r.speech); break; }
+      case "movimientos": await handleLocal("movimientos"); break;
+      case "pagar_servicio":
+        if (p.service_ref && p.account_number) await prepareLocal("prepare_payment", { service_ref: p.service_ref, account_number: p.account_number, amount_minor: p.amount_minor ?? null });
+        else if (p.service_ref) { driveApp(); push("pay", { service_ref: p.service_ref }); }
+        else { driveApp(); push("services"); }
+        break;
+      case "estacionamiento": await scanFromChat(); break;
+      case "donar":
+        if (p.foundation_ref || p.amount_minor) await prepareLocal("prepare_donation", { foundation_ref: p.foundation_ref || "fundana", amount_minor: p.amount_minor ?? 5000 });
+        else { driveApp(); push("donate"); }
+        break;
+      case "enviar":
+        if (p.recipient_ref && p.amount_minor) await prepareLocal("prepare_transfer", { recipient_ref: p.recipient_ref, amount_minor: p.amount_minor, kind: "p2p" });
+        else { driveApp(); push("send", { recipient_ref: p.recipient_ref, amount_minor: p.amount_minor }); }
+        break;
+      case "creditos_escanear": await openCreditHome(true, data.reply); break;
+      case "credito_ver":
+      case "credito_explicar":
+        if (p.offer_id || p.vertical) await openCreditOffer({ offer_id: p.offer_id, vertical: p.vertical }, data.reply);
+        else await openCreditHome(false, data.reply);
+        break;
+      case "abrir_pantalla": { const nav = SCREEN_MAP[String(p.screen_key ?? "")]; if (!nav) return false; driveApp(); nav(); break; }
+      default: return false;
+    }
+  } catch { hideThinking(); add("err", "No pude completar eso. Inténtalo de nuevo."); }
+  return true;
+}
 async function ask(text) {
   text = text.trim();
   if (!text) return;
   if (!wisiStarted) greet();
   add("user", text);
+  // Explicar una decisión de crédito lo resuelve el cerebro (credito_explicar), no el N0 local.
+  const tn = norm(text);
+  if (CREDIT_STRONG.test(tn) && /\b(por que|porque|explica\w*|como funciona)\b/.test(tn) && await brainRoute(text)) return;
+  // N0: crédito por reglas (va antes que «escanea», que si no abriría el escáner QR).
+  if (await creditN0(text)) return;
   // El escaneo es una acción de la app: lo resolvemos aquí, siempre igual.
   if (isScan(norm(text))) return scanFromChat().catch(() => add("err", "No pude abrir el escáner."));
   completeTask("wisi");
+  // N1/N2: cerebro del Worker, solo si no hay una conversación abierta con el agente.
+  if (await brainRoute(text)) return;
   const local = async () => {
     try { await handleLocal(text); }
     catch { hideThinking(); add("err", "No pude conectar con PagoDirecto. Revisa tu conexión e inténtalo de nuevo."); }
@@ -1572,8 +2002,9 @@ $("btnResetDemo").addEventListener("click", async () => {
   newPrincipal(); token = null;
   for (const k of ["pd.bal", "pd.user", "pd.points", "pd.tasks", "pd.plates", "pd.accounts", "pd.seen", "pd.scheduled", "pd.directory", "pd.billing"]) store.del(k);
   ops.clear(); state.resume = null; state.credit = null; state.catalog = null; islandPinned = false; tkCtx = null;
+  Object.assign(credit, { status: null, failed: false, offers: [], summary: null, offer: null, quote: null, bound: null }); paintCredit(); paintOffers();
   greet(); wisiStarted = false; paintIsland(); parkStep(0); paintUser(); paintClub();
-  try { await newSession(false); await refreshBalance(true); await ctx.refreshCredit(); paintBell([]); toast(`Demo reiniciada: ${bs(state.balance)}`); }
+  try { await newSession(false); await refreshBalance(true); await ctx.refreshCredit(); refreshCredit(); paintBell([]); toast(`Demo reiniciada: ${bs(state.balance)}`); }
   catch { toast("Sin conexión con PagoDirecto"); }
   go("home");
 });

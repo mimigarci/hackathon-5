@@ -15,7 +15,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="/assets/app/app.css?v=10" />
+<link rel="stylesheet" href="/assets/app/app.css?v=14" />
+<link rel="stylesheet" href="/assets/app/credit.css?v=14" />
 </head>
 <body>
 <!-- Iconos (trazo 1.8, mismo lenguaje que la app) -->
@@ -49,6 +50,7 @@
     <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1-4A8 8 0 1 1 20 12z"/></symbol>
     <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-credit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 14.5h3.5"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
     <symbol id="i-smile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9.5h.01M15 9.5h.01"/></symbol>
     <symbol id="i-mic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9V6a3 3 0 0 1 5.8-1M15 11v1a3 3 0 0 1-4.6 2.5"/><path d="M5 11a7 7 0 0 0 11 5.7M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
@@ -243,6 +245,7 @@
                 <button type="button" data-v="male" aria-pressed="false">Miguel</button>
               </span>
             </div>
+            <button type="button" class="item" data-push="crscan"><span class="ic cr-ic"><svg><use href="#i-credit"/></svg></span><span class="tx"><b>Escáner de créditos</b></span><svg class="chev"><use href="#i-chev"/></svg></button>
             <button type="button" class="item danger" id="btnResetDemo"><span class="ic" style="color:var(--err)"><svg><use href="#i-logout"/></svg></span><span class="tx"><b>Cerrar sesión</b><small>Empieza una demo nueva con Bs 5.000,00</small></span></button>
           </div>
           <p class="hint" style="margin-top:18px;text-align:center">Demo de PagoDirecto con Wisi. Ningún pago es real y ningún dato sale a bancos.</p>
@@ -373,6 +376,55 @@
       <div class="sticky-cta"><button type="submit" form="sendForm" class="btn btn-primary btn-block" id="sendGo">Continuar</button></div>
     </section>
 
+    <!-- ============================ CREDIRECTO ============================ -->
+    <section class="screen push cr" id="s-crscan" aria-label="Escáner de créditos" inert>
+      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Escáner de créditos</h1>
+        <button type="button" class="circle" data-wisi aria-label="Ayuda: hablar con Wisi"><img src="/assets/pd/header_help.svg" alt="" /></button></header>
+      <div class="scroll">
+        <article class="cr-hero" aria-label="Tu línea de crédito">
+          <div class="cr-hero-top"><span class="cr-badge" id="crLevel">Nivel —</span><span>Tu línea</span></div>
+          <div class="cr-lines">
+            <div class="cr-line"><small>Día a día</small><b class="num" id="crDaily">—</b><span class="cr-bar" aria-hidden="true"><span id="crDailyBar"></span></span><em id="crDailyOf"></em></div>
+            <div class="cr-line"><small>Turismo</small><b class="num" id="crTrip">—</b><span class="cr-bar" aria-hidden="true"><span id="crTripBar"></span></span><em id="crTripOf"></em></div>
+          </div>
+          <p class="cr-next" id="crNext">Consultando tu próxima cuota…</p>
+        </article>
+        <button type="button" class="cr-scan" id="crScan"><svg aria-hidden="true"><use href="#i-qr"/></svg>Escanear mis créditos</button>
+        <div class="cr-sec" style="margin-top:22px" id="crResults" aria-live="polite"></div>
+        <section class="cr-sec" aria-labelledby="h-crplans">
+          <h2 id="h-crplans">Mis planes</h2>
+          <div id="crPlans"></div>
+        </section>
+        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a bancos o aliados.</p>
+      </div>
+    </section>
+
+    <!-- ============================ OFERTA DE CRÉDITO ============================ -->
+    <section class="screen push cr" id="s-croffer" aria-label="Detalle del crédito" inert>
+      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Credirecto</h1><span></span></header>
+      <div class="scroll">
+        <article class="cr-detail">
+          <div class="top"><span class="cr-partner" id="coPartner"></span><span class="cr-pill" id="coPill"></span></div>
+          <h2 id="coTitle"></h2>
+          <p class="txt" id="coDetail"></p>
+          <div class="cr-price"><small>Precio</small><b class="num" id="coPrice"></b></div>
+          <p class="cr-reason" id="coReason"></p>
+        </article>
+        <section class="cr-sec" id="coPlanSec" aria-labelledby="coOptsLbl">
+          <h2 id="coOptsLbl">¿En cuántas cuotas?</h2>
+          <div class="cr-opts" id="coOpts" role="radiogroup" aria-labelledby="coOptsLbl"></div>
+          <p class="cr-freq" id="coFreq"></p>
+          <div class="cr-quote" id="coQuote" aria-live="polite"></div>
+        </section>
+        <section class="cr-sec" id="coPrecal" hidden></section>
+        <p class="cr-note">Simulación: no hay dinero real ni se envía nada a bancos o aliados.</p>
+      </div>
+      <div class="sticky-cta">
+        <button type="button" class="cr-go" id="coGo" aria-describedby="coWhy">Usar Credirecto</button>
+        <p class="cr-why" id="coWhy"></p>
+      </div>
+    </section>
+
     <!-- ============================ ÉXITO ============================ -->
     <section class="screen push" id="s-done" aria-label="Operación completada" inert>
       <div class="scroll">
@@ -467,6 +519,7 @@
         <button type="button" class="item" data-push="invoices"><span class="ic"><svg><use href="#i-receipt"/></svg></span><span class="tx"><b>Facturas</b><small>Revisa los comprobantes de tus pagos</small></span></button>
         <button type="button" class="item" data-push="charge"><span class="ic"><svg><use href="#i-send"/></svg></span><span class="tx"><b>Cobrar por wallet</b><small>Comparte un enlace de cobro</small></span></button>
         <button type="button" class="item" data-push="scan"><span class="ic"><svg><use href="#i-car"/></svg></span><span class="tx"><b>Pagar ticket de estacionamiento</b><small>Escanea el QR del ticket</small></span></button>
+        <button type="button" class="item" data-push="credit"><span class="ic cr-ic"><svg><use href="#i-credit"/></svg></span><span class="tx"><b>Credirecto</b><small>Tu línea de efectivo y tus abonos</small></span></button>
       </div>
       <button type="button" class="cancel" data-close>Cerrar</button>
     </div>
@@ -478,6 +531,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script type="module" src="/assets/app/app.js?v=10"></script>
+<script type="module" src="/assets/app/app.js?v=14"></script>
 </body>
 </html>

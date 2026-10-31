@@ -146,6 +146,10 @@ export function installFeatures(ctx) {
             req)) : null,
         c.used_minor > 0 ? h("div", { class: "card" }, h("h3", {}, "Abona a tu deuda"), h("p", {}, `Debes ${bs(c.used_minor)}. Cuota sugerida: ${bs(c.installment_minor)}.`),
           h("div", { style: "margin-top:12px" }, btn(`Abonar ${bs(Math.min(c.installment_minor, c.used_minor))}`, (e) => runPrepare("prepare_credit_payment", { amount_minor: Math.min(c.installment_minor, c.used_minor) }, e.currentTarget), "btn btn-ghost btn-block"))) : null,
+        h("section", { class: "cr-promo", "aria-labelledby": "crPromoT" },
+          h("h3", { id: "crPromoT" }, "Escanea créditos en todo el ecosistema"),
+          h("p", {}, "Servicios, TuGruero, Seguros Mercantil, viajes con SAGA y Estei, carros con Conduce y casas con Propiedash"),
+          h("button", { type: "button", class: "cr-go", onclick: () => push("crscan") }, "Escanear mis créditos")),
         h("p", { class: "hint" }, "Simulación de demostración: no es una oferta de crédito real."));
       if ($("crAmt")) {
         $("crAmt").addEventListener("input", paintReq); paintReq();
