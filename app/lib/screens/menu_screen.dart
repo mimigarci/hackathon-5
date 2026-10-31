@@ -43,7 +43,9 @@ class MenuScreen extends StatelessWidget {
                           leading: Icon(icon, color: AppColors.textPrimary),
                           title: Text(label),
                           trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => openPlaceholder(context, label),
+                          onTap: () => label == 'Cerrar sesión'
+                              ? AppScope.of(context).onSignOut?.call()
+                              : openPlaceholder(context, label),
                         ),
                     ],
                   ),
