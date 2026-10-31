@@ -1,0 +1,38 @@
+:root {
+  --pd: #e6005c;
+  --pd2: #ff2e7e;
+  --bg: #0f1115;
+  --panel: #1a1d24;
+  --muted: #9aa0ac;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: #f3f4f6;
+}
+.app { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pd), var(--pd2));
+  display: grid; place-items: center; font-weight: 800; font-size: 20px;
+}
+h1 { font-size: 18px; margin: 0; }
+small { color: var(--muted); }
+button {
+  background: var(--panel); color: #f3f4f6; border: 1px solid #2a2e37;
+  padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 14px;
+}
+button:hover { border-color: var(--pd); }
+button.primary { background: linear-gradient(135deg, var(--pd), var(--pd2)); border: none; font-weight: 600; }
+button.big { width: 100%; padding: 16px; font-size: 16px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chat { display: flex; flex-direction: column; gap: 8px; min-height: 240px; }
+.line { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 14px; line-height: 1.4; }
+.line.user { align-self: flex-end; background: var(--pd); }
+.line.wisi { align-self: flex-start; background: var(--panel); border: 1px solid #2a2e37; }
+.line.sys { align-self: center; background: transparent; color: var(--muted); font-size: 12px; }
+footer { margin-top: 28px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+code { color: #ffd1e3; }
