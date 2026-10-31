@@ -45,9 +45,21 @@ export const EVENTS: Product[] = [
   { product_ref: "ev_standup", name: "Stand-up comedy", detail: "Vie 27 nov · 9:00 p. m.", price_minor: 180_00, unit: "boleto" },
   { product_ref: "ev_beisbol", name: "Béisbol: juego de temporada", detail: "Dom 29 nov · 5:00 p. m.", price_minor: 120_00, unit: "boleto" },
 ];
-export const CATALOG: Record<string, Product[]> = { parquimetros: PARKING_ZONES, seguros: INSURANCE, boleteria: EVENTS };
-export const CATALOG_KIND: Record<string, string> = { parquimetros: "parking_meter", seguros: "insurance", boleteria: "tickets" };
-export const MAX_QUANTITY: Record<string, number> = { parquimetros: 8, seguros: 1, boleteria: 6 };
+export const TOW_PLANS: Product[] = [
+  { product_ref: "tg_v_classic_m", name: "Classic mensual", type: "vehiculos_m", detail: "Grúa y auxilio vial básico", price_minor: 120_00, unit: "mes" },
+  { product_ref: "tg_v_plus_m", name: "Plus mensual", type: "vehiculos_m", detail: "Más kilómetros de grúa y auxilio", price_minor: 190_00, unit: "mes" },
+  { product_ref: "tg_v_gold_m", name: "Gold mensual", type: "vehiculos_m", detail: "Cobertura máxima y servicios ilimitados", price_minor: 280_00, unit: "mes" },
+  { product_ref: "tg_v_classic_a", name: "Classic anual", type: "vehiculos_a", detail: "Grúa y auxilio vial básico", price_minor: 1_200_00, unit: "año" },
+  { product_ref: "tg_v_plus_a", name: "Plus anual", type: "vehiculos_a", detail: "Más kilómetros de grúa y auxilio", price_minor: 1_900_00, unit: "año" },
+  { product_ref: "tg_v_gold_a", name: "Gold anual", type: "vehiculos_a", detail: "Cobertura máxima y servicios ilimitados", price_minor: 2_800_00, unit: "año" },
+  { product_ref: "tg_m_moto_m", name: "Moto mensual", type: "moto_m", detail: "Asistencia vial para tu moto", price_minor: 90_00, unit: "mes" },
+  { product_ref: "tg_m_retro_m", name: "Retro mensual", type: "moto_m", detail: "Motos clásicas", price_minor: 110_00, unit: "mes" },
+  { product_ref: "tg_m_moto_a", name: "Moto anual", type: "moto_a", detail: "Asistencia vial para tu moto", price_minor: 900_00, unit: "año" },
+  { product_ref: "tg_m_retro_a", name: "Retro anual", type: "moto_a", detail: "Motos clásicas", price_minor: 1_100_00, unit: "año" },
+];
+export const CATALOG: Record<string, Product[]> = { parquimetros: PARKING_ZONES, seguros: INSURANCE, boleteria: EVENTS, tugruero: TOW_PLANS };
+export const CATALOG_KIND: Record<string, string> = { parquimetros: "parking_meter", seguros: "insurance", boleteria: "tickets", tugruero: "tow_plan" };
+export const MAX_QUANTITY: Record<string, number> = { parquimetros: 8, seguros: 1, boleteria: 6, tugruero: 1 };
 
 export const TOPUP_METHODS: Record<string, string> = {
   cuentas_nacionales: "Cuentas Nacionales",

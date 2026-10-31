@@ -37,13 +37,7 @@ export function installFeatures(ctx) {
   const amountChips = (values, inputId, onPick) =>
     h("div", { class: "amounts" }, values.map((v) => h("button", { type: "button", class: "chip", onclick: () => { $(inputId).value = fmt.format(v / 100); haptic(6); onPick?.(); } }, bs(v).replace(",00", ""))));
   const stepper = (labels, k) => h("div", { class: "stepper" }, labels.map((l, i) => h("div", { class: "step" + (i < k ? " done" : i === k ? " on" : "") }, h("i"), l)));
-  const KIND_ICON = { payment: "i-receipt", parking: "i-car", donation: "i-heart", transfer: "i-send", topup: "i-bank", credit: "i-bank", credit_payment: "i-bank", parking_meter: "i-meter", insurance: "i-shield", tickets: "i-ticket" };
-  const moveItem = (m) => {
-    const pos = m.amount_minor > 0;
-    return h("div", { class: "item" }, h("span", { class: "ic" }, icon(KIND_ICON[m.kind] || "i-receipt")),
-      h("span", { class: "tx" }, h("b", {}, m.title), h("small", {}, when(m.created_at))),
-      h("span", { class: "amt num", style: `color:${pos ? "var(--ok)" : "var(--ink)"}` }, (pos ? "+" : "−") + bs(Math.abs(m.amount_minor))));
-  };
+  const moveItem = (m) => ctx.moveRow(m);
   async function moves() { try { return await loadMovements(); } catch { return []; } }
   async function catalog(section) {
     state.catalog ??= {};
@@ -81,10 +75,10 @@ export function installFeatures(ctx) {
 
   // ---------------------------------------------------------------- Depositar
   const METHODS = [
-    ["cuentas_nacionales", "Cuentas Nacionales", "Desde la app"],
-    ["pago_movil", "Pago Móvil", "Desde tu banco"],
-    ["bdv", "Banco de Venezuela", "Desde la app"],
-    ["humaniz", "Humaniz", "Desde la app"],
+    ["cuentas_nacionales", "Cuentas Nacionales", "Desde la app", "debito_inmediato"],
+    ["pago_movil", "Pago Móvil", "Desde tu banco", "pago_movil"],
+    ["bdv", "Banco de Venezuela", "Desde la app", "bdv"],
+    ["humaniz", "Humaniz", "Desde la app", "humaniz"],
   ];
   shell("deposit", "Depositar fondos");
   S.deposit = {
@@ -92,16 +86,17 @@ export function installFeatures(ctx) {
       const pg = page("deposit");
       if (!p.method) {
         fill(pg, h("h2", {}, "¿Cómo deseas recargar tu wallet?"),
-          h("div", { class: "rowlist" }, METHODS.map(([ref, name, sub]) => h("button", { type: "button", class: "item method", onclick: () => S.deposit.enter({ method: ref, amount_minor: p.amount_minor }) },
-            h("span", { class: "ic" }, icon("i-bank")), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, sub)), h("span", { html: '<svg class="chev"><use href="#i-chev"/></svg>' }).firstChild))),
+          h("div", { class: "rowlist" }, METHODS.map(([ref, name, sub, img]) => h("button", { type: "button", class: "item method", onclick: () => S.deposit.enter({ method: ref, amount_minor: p.amount_minor }) },
+            h("span", { class: "ic logo" }, h("img", { src: `/assets/pd/dep/deposit_method_${img}.svg`, alt: "" })), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, sub)), h("span", { html: '<svg class="chev"><use href="#i-chev"/></svg>' }).firstChild))),
           h("p", { class: "hint" }, "Recarga simulada: en esta demo no se mueve dinero real."));
         return;
       }
-      const name = METHODS.find((m) => m[0] === p.method)?.[1] ?? "Pago Móvil";
+      const chosen = METHODS.find((m) => m[0] === p.method) ?? METHODS[1];
+      const name = chosen[1];
       const go = h("button", { type: "button", class: "btn btn-primary btn-block" }, "Recargar");
       const paint = () => { const a = parseBs($("depAmt").value); go.textContent = a ? `Recargar ${bs(a)}` : "Recargar"; };
       fill(pg, 
-        h("div", { class: "picked" }, icon("i-bank", 26), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, "Llega al instante a tu wallet"))),
+        h("div", { class: "picked" }, h("img", { src: `/assets/pd/dep/deposit_method_${chosen[3]}.svg`, alt: "", width: "34", height: "34", style: "object-fit:contain" }), h("span", { class: "tx" }, h("b", {}, name), h("small", {}, "Llega al instante a tu wallet"))),
         moneyField("depAmt", p.amount_minor ?? 500_00, "Monto a recargar", "Máximo Bs 10.000 por recarga."),
         amountChips([100_00, 500_00, 1_000_00, 2_000_00], "depAmt", paint),
         go, btn("Cambiar método", () => S.deposit.enter({}), "btn btn-ghost btn-block"));
@@ -136,7 +131,7 @@ export function installFeatures(ctx) {
       const paintReq = () => { const a = parseBs($("crAmt").value); req.textContent = a ? `Solicitar ${bs(a)}` : "Solicitar"; req.disabled = !a || a > c.available_minor; };
       fill(pg, 
         h("div", { class: "credi", style: "min-height:170px" },
-          h("span", { class: "brand", html: '<i aria-hidden="true"></i>Credirecto' }),
+          h("span", { class: "brand", html: '<img src="/assets/pd/cr/credirecto_isotipo.svg" alt="" /><img class="wm" src="/assets/pd/cr/credirecto_wordmark.svg" alt="Credirecto" />' }),
           h("small", { style: "margin-top:auto" }, "Disponible"),
           h("span", { class: "big num" }, bs(c.available_minor)),
           h("span", { class: "meter" }, h("i", { style: `width:${Math.round((c.used_minor / c.limit_minor) * 100)}%` }))),
@@ -282,7 +277,7 @@ export function installFeatures(ctx) {
           h("div", { class: "seg", role: "tablist", "aria-label": "Tipo de seguro" },
             [["vehiculos", "Vehículos"], ["personas", "Personas"]].map(([k, l]) => h("button", { type: "button", role: "tab", "aria-selected": String(type === k), onclick: () => { type = k; p = {}; render(); } }, l))),
           h("div", { class: "list" }, items.filter((i) => i.type === type).map((i) => h("button", { type: "button", class: "item", onclick: () => { p = { product_ref: i.product_ref }; render(); } },
-            h("span", { class: "ic" }, icon("i-shield")), h("span", { class: "tx" }, h("b", {}, i.name), h("small", {}, i.detail)), h("span", { class: "amt num" }, `${bs(i.price_minor)}/mes`)))),
+            i.type === "vehiculos" ? h("span", { class: "ic logo" }, h("img", { src: "/assets/pd/logos/ccs_rcv.png", alt: "" })) : h("span", { class: "ic" }, icon("i-shield")), h("span", { class: "tx" }, h("b", {}, i.name), h("small", {}, i.detail)), h("span", { class: "amt num" }, `${bs(i.price_minor)}/mes`)))),
           sel ? h("div", { class: "card" }, h("h3", {}, sel.name), h("p", {}, sel.detail),
             h("dl", { class: "kv" }, h("div", {}, h("dt", {}, "Vigencia"), h("dd", {}, "1 mes")), h("div", {}, h("dt", {}, "Prima"), h("dd", { class: "num" }, bs(sel.price_minor)))),
             h("div", { style: "margin-top:14px" }, btn(`Contratar ${bs(sel.price_minor)}`, (e) => (p.intent_id ? ctx.confirmOp(p.intent_id, "ui") : runPrepare("prepare_purchase", { product_ref: sel.product_ref, quantity: 1 }, e.currentTarget))))) : null,
@@ -509,19 +504,212 @@ export function installFeatures(ctx) {
     },
   };
 
+  // ---------------------------------------------------------------- Servicios (formularios de cada proveedor)
+  const DOC_TYPES = ["V", "E", "J", "P", "G"];
+  const phone = (prefixes, error) => ({ id: "phone", kind: "prefix", label: "Número de teléfono", hint: "1234567", options: prefixes, min: 7, max: 7, error });
+  const AMOUNT = { id: "amount", kind: "amount", label: "Monto a recargar" };
+  const contract = (hint = "123456789") => ({ id: "contract", kind: "text", label: "Número de contrato", hint, min: 6, max: 14 });
+  const doc = (label = "Número de documento") => ({ id: "document", kind: "document", label, hint: "12345678", min: 6, max: 10 });
+  const single = (...fields) => [{ label: "", cta: "query", fields }];
+  const SVC_FORMS = {
+    digitel: [{ label: "Prepago", cta: "pay", fields: [phone(["0412", "0422"]), AMOUNT] }, { label: "Postpago", cta: "query", fields: [phone(["0412", "0422"], "Ingrese un número de contrato válido")] }],
+    movilnet: [{ label: "Prepago", cta: "pay", fields: [phone(["0416", "0426"]), AMOUNT] }, { label: "Postpago", cta: "query", fields: [contract()] }],
+    movistar: [{ label: "Prepago", cta: "pay", fields: [phone(["0414", "0424"]), AMOUNT] }, { label: "Postpago", cta: "query", fields: [contract(), { id: "service_type", kind: "select", label: "Tipo de servicio", options: ["Telefonía Celular o Internet Móvil", "Telefonía Fija"] }] }],
+    simpletv: single(contract("0000000000")),
+    inter: single(doc()),
+    cantv: single({ id: "phone", kind: "text", label: "Número de teléfono", hint: "1234567", min: 7, max: 10 }),
+    corpoelec: single(doc()),
+    thundernet: single(doc()),
+    dlm: single({ id: "condo", kind: "select", label: "Condominio", options: ["Residencias Los Samanes", "Conjunto El Parque"] }, { id: "unit", kind: "select", label: "Inmueble", options: ["Apto 4-B", "Apto 7-A", "Local 2"] }),
+    globalsystem: single(doc("Número de cédula")),
+    starmoviles: single({ id: "document", kind: "text", label: "Documento / Cédula", hint: "12345678", min: 6, max: 10 }),
+    fibex: single(doc()),
+  };
+  const RECHARGE = [100_00, 200_00, 300_00, 500_00, 1_000_00, 2_000_00];
+  const svcOf = (ref) => state.services.find((x) => x.service_ref === ref);
+  function fieldEl(f, value) {
+    const id = `svc-${f.id}`;
+    const err = h("span", { class: "err-msg", hidden: true }, f.error ?? `Revisa: ${f.label.toLowerCase()}.`);
+    const textIn = () => h("input", { class: "input num", id, inputmode: "numeric", autocomplete: "off", placeholder: f.hint, maxlength: f.max ?? 20 });
+    let ctrl, read;
+    if (f.kind === "prefix" || f.kind === "document") {
+      const sel = h("select", { class: "input", "aria-label": f.kind === "prefix" ? "Prefijo" : "Tipo de documento" }, (f.options ?? DOC_TYPES).map((o) => h("option", {}, o)));
+      const inp = textIn();
+      ctrl = h("div", { class: "input-row" }, sel, inp);
+      read = () => { const v = inp.value.replace(/\D/g, ""); return v.length >= (f.min ?? 1) ? (f.kind === "prefix" ? sel.value + v : `${sel.value}-${v}`) : null; };
+      if (value) inp.value = String(value).replace(/\D/g, "").slice(f.kind === "prefix" ? -7 : 0);
+    } else if (f.kind === "select" || f.kind === "amount") {
+      ctrl = h("select", { class: "input", id }, f.kind === "amount" ? RECHARGE.map((a) => h("option", { value: a }, bs(a))) : f.options.map((o) => h("option", {}, o)));
+      read = () => ctrl.value;
+    } else {
+      ctrl = textIn();
+      if (value) ctrl.value = String(value).replace(/\D/g, "");
+      read = () => { const v = ctrl.value.replace(/\D/g, ""); return v.length >= (f.min ?? 1) ? v : null; };
+    }
+    return { f, read, err, el: h("div", { class: "field" }, h("label", { for: id }, f.label), ctrl, err) };
+  }
+  function rememberService(svc, account) {
+    storeJSON.set("pd.directory", [{ service_ref: svc.service_ref, name: svc.name, account }, ...storeJSON.get("pd.directory", []).filter((x) => x.account !== account)].slice(0, 6));
+  }
+  S.pay = {
+    enter(p = {}) {
+      const svc = svcOf(p.service_ref) ?? state.services[0];
+      if (!svc) return;
+      state.payBound = p.intent_id ? { intent_id: p.intent_id } : null;
+      const pg = $("payPage");
+      const modes = SVC_FORMS[svc.service_ref] ?? single(contract());
+      const brand = ctx.logoOf(svc.service_ref) ? h("img", { class: "svc-brand", src: ctx.logoOf(svc.service_ref), alt: svc.name }) : h("h2", { style: "text-align:center" }, svc.name);
+      const render = (idx) => {
+        const m = modes[idx];
+        const account = m.fields.find((f) => f.id !== "amount" && f.kind !== "select");
+        const fields = m.fields.map((f) => fieldEl(f, f === account ? p.account_number : null));
+        const read = () => {
+          let ok = true; const out = {};
+          for (const x of fields) { const v = x.read(); x.err.hidden = !!v; if (!v) ok = false; out[x.f.id] = v; }
+          if (!ok) return null;
+          out.account = Object.entries(out).filter(([k]) => k !== "amount" && k !== "service_type").map(([, v]) => v).join(" · ");
+          return out;
+        };
+        const debtBox = h("div", { hidden: true });
+        const pay = async (data, amount, b) => {
+          rememberService(svc, data.account);
+          if (state.payBound?.intent_id && p.amount_minor === amount) return ctx.confirmOp(state.payBound.intent_id, "ui");
+          return runPrepare("prepare_payment", { service_ref: svc.service_ref, account_number: data.account, amount_minor: amount }, b);
+        };
+        const showDebt = (data, amount) => {
+          debtBox.hidden = false;
+          fill(debtBox, h("div", { class: "card" }, h("div", { class: "debt" }, h("span", {}, "Deuda pendiente"), h("b", { class: "num" }, bs(amount))), h("p", {}, `${svc.name} · ${data.account}`),
+            h("div", { style: "margin-top:14px" }, btn(`Pagar ${bs(amount)}`, (e) => pay(data, amount, e.currentTarget)))));
+        };
+        const cta = h("button", { type: "button", class: "btn btn-primary btn-block" }, m.cta === "pay" ? "Pagar" : "Consultar");
+        cta.onclick = async () => {
+          const data = read(); if (!data) return;
+          if (m.cta === "pay") return pay(data, Number(data.amount), cta);
+          cta.classList.add("loading");
+          await ctx.sleep(500);
+          cta.classList.remove("loading");
+          showDebt(data, p.amount_minor ?? svc.sample_pending_minor);
+        };
+        fill(pg, brand,
+          modes.length > 1 ? h("div", { class: "seg", role: "tablist", "aria-label": "Modalidad" }, modes.map((x, i) => h("button", { type: "button", role: "tab", "aria-selected": String(i === idx), onclick: () => render(i) }, x.label))) : null,
+          fields.map((x) => x.el), cta, debtBox, h("p", { class: "hint" }, "Deuda y montos de demostración."));
+        if (p.intent_id && p.account_number) { const d = read(); if (d) showDebt({ ...d, account: p.account_number }, p.amount_minor ?? svc.sample_pending_minor); else showDebt({ account: p.account_number }, p.amount_minor ?? svc.sample_pending_minor); }
+      };
+      render(p.intent_id && modes.length > 1 ? 1 : 0);
+    },
+  };
+  // Directorio / Programar / Historial, abajo en Servicios como en la app
+  {
+    const nav = h("nav", { class: "subtabs", "aria-label": "Opciones de servicios" });
+    for (const [name, label, ic] of [["directory", "Directorio", "i-user"], ["schedule", "Programar", "i-history"], ["svchistory", "Historial", "i-receipt"]])
+      nav.append(h("button", { type: "button", onclick: () => push(name) }, icon(ic, 24), label));
+    $("s-services").append(nav);
+  }
+  shell("directory", "Directorio");
+  S.directory = {
+    enter() {
+      const list = storeJSON.get("pd.directory", []);
+      fill(page("directory"), list.length ? h("div", { class: "list" }, list.map((x) => h("button", { type: "button", class: "item", onclick: () => push("pay", { service_ref: x.service_ref, account_number: x.account }) },
+        ctx.logoOf(x.service_ref) ? h("span", { class: "ic logo" }, h("img", { src: ctx.logoOf(x.service_ref), alt: "" })) : h("span", { class: "ic" }, icon("i-receipt")),
+        h("span", { class: "tx" }, h("b", {}, x.name), h("small", {}, x.account))))) : emptyPlain("Directorio vacío", "Los servicios que pagues quedan guardados aquí."));
+    },
+  };
+  shell("schedule", "Programar pago");
+  S.schedule = {
+    enter() {
+      const payable = state.services.filter((x) => x.sample_pending_minor > 0 && x.service_ref !== "condominio");
+      const svc = h("select", { class: "input", id: "scSvc" }, payable.map((x) => h("option", { value: x.service_ref }, x.name)));
+      const acct = h("input", { class: "input num", id: "scAcct", inputmode: "numeric", maxlength: "14", autocomplete: "off", placeholder: "Teléfono, contrato o documento" });
+      const date = h("input", { class: "input", id: "scDate", type: "date", min: new Date().toISOString().slice(0, 10) });
+      fill(page("schedule"), h("div", { class: "field" }, h("label", { for: "scSvc" }, "Elige el servicio"), svc),
+        h("div", { class: "field" }, h("label", { for: "scAcct" }, "Número"), acct), moneyField("scAmt", 100_00, "Monto"),
+        h("div", { class: "field" }, h("label", { for: "scDate" }, "Fecha"), date),
+        btn("Programar", () => {
+          const a = parseBs($("scAmt").value), s0 = svcOf(svc.value);
+          if (!acct.value.trim() || !a || !date.value) return toast("Completa el número, el monto y la fecha");
+          storeJSON.set("pd.scheduled", [...storeJSON.get("pd.scheduled", []), { service_ref: s0.service_ref, name: s0.name, account: acct.value.trim(), amount_minor: a, date: date.value }].slice(-6));
+          toast("Pago programado"); ctx.pop(); go("pagos"); $("payFilter").querySelector('[data-f="prog"]').click();
+        }), h("p", { class: "hint" }, "En esta demo el pago programado se guarda, pero no se ejecuta solo."));
+    },
+  };
+  shell("svchistory", "Historial");
+  S.svchistory = {
+    async enter() {
+      const pg = page("svchistory");
+      fill(pg, loading());
+      const ms = (await moves()).filter((m) => m.kind === "payment");
+      fill(pg, ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus pagos de servicios."));
+    },
+  };
+
+  // ---------------------------------------------------------------- TuGruero
+  shell("tugruero", "Servicios", { tabs: [["buy", "Adquirir plan", "i-plus"], ["history", "Historial", "i-history"], ["support", "Soporte", "i-chat"]] });
+  const PLAN_IMG = (n) => `/assets/pd/svc/membership_${/gold/i.test(n) ? "gold" : /plus/i.test(n) ? "plus" : /retro/i.test(n) ? "retro" : /moto/i.test(n) ? "moto" : "classic"}.png`;
+  const tgNav = (t) => (t === "buy" ? S.tugruero.enter() : t === "history" ? S.tugruero.history() : push("help"));
+  S.tugruero = {
+    enter(p = {}) {
+      setTabs("tugruero", "buy", tgNav);
+      const logo = h("img", { class: "svc-brand", src: "/assets/pd/svc/tugruero_logo.png", alt: "TuGruero" });
+      if (p.product_ref) return S.tugruero.plans(p.product_ref.startsWith("tg_m") ? "moto" : "vehiculos", p.product_ref.endsWith("_a") ? "a" : "m", p);
+      fill(page("tugruero"), stepper(["Servicios", "Gestionar", "Listo"], 1), logo, h("div", { class: "pick-grid" },
+        [["vehiculos", "Vehículos", "vehiculo"], ["moto", "Moto", "moto"]].map(([k, l, img]) => h("button", { type: "button", class: "card-pick", onclick: () => S.tugruero.plans(k, "a") }, h("img", { src: `/assets/pd/svc/${img}.png`, alt: "" }), l))));
+    },
+    async plans(cat, period, p = {}) {
+      const pg = page("tugruero");
+      fill(pg, loading());
+      const all = await catalog("tugruero");
+      let sel = p.product_ref ?? null;
+      const items = all.filter((i) => i.type === `${cat}_${period}`);
+      const render = () => {
+        const it = items.find((x) => x.product_ref === sel);
+        const buy = h("button", { type: "button", class: "btn btn-primary btn-block", disabled: !it }, it ? `Adquirir ${bs(it.price_minor)}` : "Adquirir");
+        buy.onclick = () => (p.intent_id && p.product_ref === sel ? ctx.confirmOp(p.intent_id, "ui") : runPrepare("prepare_purchase", { product_ref: sel, quantity: 1 }, buy));
+        fill(pg, stepper(["Servicios", "Gestionar", "Listo"], 1), h("h2", {}, "Planes disponibles"),
+          h("div", { class: "seg", role: "tablist", "aria-label": "Periodo" }, [["a", "Anuales"], ["m", "Mensuales"]].map(([k, l]) => h("button", { type: "button", role: "tab", "aria-selected": String(k === period), onclick: () => S.tugruero.plans(cat, k) }, l))),
+          h("div", { class: "pick-grid" }, items.map((x) => h("button", { type: "button", class: "card-pick", "aria-pressed": String(x.product_ref === sel), onclick: () => { sel = x.product_ref; render(); } },
+            h("img", { src: PLAN_IMG(x.name), alt: "" }), h("span", {}, x.name.split(" ")[0]), h("span", { class: "plan-price" }, "Desde", h("b", { class: "num" }, bs(x.price_minor)))))),
+          it ? h("p", { class: "hint" }, it.detail) : null, buy, h("p", { class: "hint" }, "Precios de demostración."));
+      };
+      render();
+    },
+    async history() {
+      setTabs("tugruero", "history", tgNav);
+      const ms = (await moves()).filter((m) => m.kind === "tow_plan");
+      fill(page("tugruero"), h("h2", {}, "Historial"), ms.length ? h("div", { class: "list" }, ms.map(moveItem)) : emptyPlain("Sin resultados", "Aquí verás tus planes de TuGruero."));
+    },
+  };
+
   // ---------------------------------------------------------------- Jomi
   shell("jomi", "Jomi");
+  const JOMI = [["Plomería", "plomeria"], ["Mecánica", "mecanica"], ["Línea blanca", "linea_blanca"], ["Electricidad", "electricidad"], ["Construcción", "construccion"]];
   S.jomi = {
     enter() {
-      const CATS = [["Línea blanca", "Neveras, lavadoras y cocinas"], ["Mecánica", "Tu carro, donde estés"], ["Electricidad", "Instalaciones y averías"], ["Construcción", "Remodelaciones y albañilería"], ["Plomería", "Fugas y destapes"]];
-      fill(page("jomi"), h("h2", {}, "Pídelo acá. Con Jomi resuelves."),
-        h("div", { class: "rowlist" }, CATS.map(([name, sub]) => row("i-user", name, sub, async (e) => {
-          const b = e.currentTarget; b.disabled = true;
-          try { await callTool("create_support_case", { category: "general", summary: `Jomi: ${name}` }); toast(`Pedimos un técnico de ${name.toLowerCase()}. Te contactamos pronto.`); }
-          catch { toast("Sin conexión. Inténtalo de nuevo."); }
-          b.disabled = false;
-        }))),
-        h("p", { class: "hint" }, "Solicitud de demostración: nadie va a tu casa."));
+      fill(page("jomi"), h("img", { class: "svc-brand", src: "/assets/pd/svc/jomi_wordmark.png", alt: "Jomi", style: "max-height:44px" }), h("h2", {}, "¿Qué necesitas resolver?"),
+        h("div", { class: "pick-grid" }, JOMI.map(([name, img]) => h("button", { type: "button", class: "card-pick", onclick: () => S.jomi.form(name) }, h("img", { src: `/assets/pd/svc/${img}.png`, alt: "", style: "height:56px" }), name))));
+    },
+    form(cat) {
+      const nameIn = h("input", { class: "input", id: "joName", maxlength: "60", autocomplete: "off", value: store.get("pd.joname", "") });
+      const phoneIn = h("input", { class: "input num", id: "joPhone", inputmode: "tel", maxlength: "16", autocomplete: "off", placeholder: "0414-1234567" });
+      const addr = h("input", { class: "input", id: "joAddr", maxlength: "120", autocomplete: "off" });
+      const desc = h("textarea", { class: "input", id: "joDesc", rows: "3", maxlength: "280", placeholder: "Opcional" });
+      const go2 = h("button", { type: "button", class: "btn btn-primary btn-block", disabled: true }, "Continuar");
+      const check = () => { go2.disabled = !(nameIn.value.trim() && phoneIn.value.trim().length >= 7 && addr.value.trim()); };
+      for (const i of [nameIn, phoneIn, addr]) i.addEventListener("input", check);
+      go2.onclick = async () => {
+        go2.classList.add("loading");
+        try {
+          await callTool("create_support_case", { category: "general", summary: `Jomi ${cat}: ${desc.value.trim() || "sin descripción"}` });
+          store.set("pd.joname", nameIn.value.trim());
+          fill(page("jomi"), h("div", { class: "empty-plain" }, h("b", {}, "¡Solicitud enviada!"), `Jomi te contactará para coordinar tu servicio de ${cat.toLowerCase()}.`), btn("Volver", () => ctx.pop(), "btn btn-ghost btn-block"));
+        } catch { toast("Sin conexión. Inténtalo de nuevo."); }
+        go2.classList.remove("loading");
+      };
+      fill(page("jomi"), h("h2", {}, `Tus datos · ${cat}`),
+        h("div", { class: "field" }, h("label", { for: "joName" }, "Nombre completo*"), nameIn),
+        h("div", { class: "field" }, h("label", { for: "joPhone" }, "Teléfono*"), phoneIn),
+        h("div", { class: "field" }, h("label", { for: "joAddr" }, "Dirección*"), addr),
+        h("div", { class: "field" }, h("label", { for: "joDesc" }, "Descripción del problema"), desc),
+        h("p", { class: "hint" }, "Al continuar, Jomi te contactará para coordinar el servicio. Solicitud de demostración."), go2);
     },
   };
 

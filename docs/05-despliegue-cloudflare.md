@@ -67,3 +67,18 @@ modo avión en el móvil. Comprobación: `dig +short A botflow.lat @1.1.1.1`.
   30 por defecto; best-effort por instancia). Al superarlo, la webapp sigue en modo chat.
 - Cada móvil tiene su propio saldo demo (id aleatorio en `localStorage`).
 - Registros `api` y `n8n` → 207.180.250.207 (proxied) no los toca este despliegue.
+
+## Supabase
+
+El Worker replica cuentas y movimientos en Supabase (`SUPABASE_URL` y
+`SUPABASE_PUBLISHABLE_KEY` en `wrangler.jsonc`; la clave publicable no es secreta). El saldo
+sigue moviéndose en el Durable Object: Supabase es una copia para consultar, y si falla
+no afecta a los pagos.
+
+1. Ejecuta `supabase/migrations/002_wisi_web.sql` en Supabase > SQL Editor.
+2. Comprueba: `curl https://botflow.lat/health?deep=1` debe decir `"supabase":"conectada"`.
+
+`wisi_sync` no pide clave: quien tenga la publicable puede añadir filas falsas a esta
+copia, aunque no leerlas ni tocar el saldo. Si los datos pasan a importar, usar una clave
+de servidor.
+

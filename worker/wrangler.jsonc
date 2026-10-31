@@ -24,7 +24,10 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Wallet"] }],
   "vars": {
     "WISIVOZ_INTENT_TTL": "180",
-    "WISIVOZ_SIGNED_PER_IP_10MIN": "30"
+    "WISIVOZ_SIGNED_PER_IP_10MIN": "30",
+    // Clave publicable: pensada para ir en cliente; la protección es RLS (migración 002).
+    "SUPABASE_URL": "https://yhiwsvqeeqvtisqckihd.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_VxP8Kab4bqz6q2WwVeav4g_YQejfdhz"
   },
   "observability": { "enabled": true }
 }

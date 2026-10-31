@@ -273,6 +273,7 @@ def confirm_and_execute(principal: str, intent_id: str, approval_proof: str) -> 
 
 
 _DONE = {
+    "tow_plan": "Listo, tu plan de TuGruero está activo",
     "payment": "Listo, pago confirmado",
     "parking": "Listo, ticket pagado: ya puedes salir",
     "donation": "Listo, donación enviada. ¡Gracias por ayudar",
@@ -302,6 +303,8 @@ def _describe(kind: str, details: dict) -> str:
             return "Credirecto · desembolso"
         case "credit_payment":
             return "Credirecto · abono"
+        case "tow_plan":
+            return f"TuGruero · {details.get('product', '')}"
         case "parking_meter" | "insurance" | "tickets":
             qty = int(details.get("quantity", 1))
             label = {"parking_meter": "Parquímetro", "insurance": "Seguro", "tickets": "Boletería"}[kind]

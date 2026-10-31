@@ -21,6 +21,8 @@ export interface Env {
   ELEVENLABS_AGENT_ID_FEMALE?: string;
   ELEVENLABS_AGENT_ID_MALE?: string;
   WISIVOZ_SESSION_SECRET?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
   WISIVOZ_INTENT_TTL?: string;
   WISIVOZ_SIGNED_PER_IP_10MIN?: string;
 }
@@ -132,10 +134,31 @@ export class Wallet extends DurableObject<Env> {
   }
 
   /** Cuándo se abrió el monedero (para el movimiento de saldo inicial). */
-  async openedAt(): Promise<number> {
+  async openedAt(principal: string): Promise<number> {
     let t = await this.ctx.storage.get<number>("opened_at");
-    if (t == null) { t = Date.now() / 1000; await this.ctx.storage.put("opened_at", t); }
+    if (t == null) {
+      t = Date.now() / 1000;
+      await this.ctx.storage.put("opened_at", t);
+      this.replicate(principal, await this.balanceMinor(), await this.creditUsed());
+    }
     return t;
+  }
+
+  /** Copia a Supabase en segundo plano: si falla, el pago ya está hecho y no se entera nadie. */
+  private replicate(principal: string, balance: number, creditUsed: number, op?: Operation) {
+    const { SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key } = this.env;
+    if (!url || !key) return;
+    const p_op = op && {
+      operation_ref: op.operation_ref, kind: op.kind, title: describe(op.kind, op.details),
+      amount_minor: (CREDIT_KINDS.has(op.kind) ? 1 : -1) * (op.amount_minor + op.fee_minor), details: op.details ?? {},
+    };
+    this.ctx.waitUntil(
+      fetch(`${url.replace(/\/$/, "")}/rest/v1/rpc/wisi_sync`, {
+        method: "POST",
+        headers: { apikey: key, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_principal: principal, p_balance: balance, p_credit_used: creditUsed, p_op: p_op ?? null }),
+      }).then((r) => { if (!r.ok) console.warn("supabase", r.status); }).catch((e) => console.warn("supabase", String(e))),
+    );
   }
 
   async creditUsed(): Promise<number> {
@@ -158,7 +181,7 @@ export class Wallet extends DurableObject<Env> {
   }
 
   /** Ejecuta una intención de forma idempotente (misma prueba -> misma operación). */
-  async execute(intent_id: string, proof: string): Promise<{ result: ExecResult; op?: Operation; balance: number }> {
+  async execute(principal: string, intent_id: string, proof: string): Promise<{ result: ExecResult; op?: Operation; balance: number }> {
     // Las llamadas a un Durable Object se serializan: no hace falta lock.
     const s = this.ctx.storage;
     const replay = await s.get<string>(`idem:${proof}`);
@@ -193,6 +216,7 @@ export class Wallet extends DurableObject<Env> {
       [`op:${op.operation_ref}`]: op,
       [`idem:${proof}`]: op.operation_ref,
     });
+    this.replicate(principal, next, used, op);
     return { result: "executed", op, balance: next };
   }
 
@@ -227,6 +251,7 @@ const DONE: Record<string, string> = {
   parking_meter: "Listo, tu parquímetro está activo",
   insurance: "Listo, tu póliza quedó activa",
   tickets: "Listo, tus boletos están en Mis boletos",
+  tow_plan: "Listo, tu plan de TuGruero está activo",
 };
 
 function describe(kind: string, d: Details = {}): string {
@@ -238,6 +263,7 @@ function describe(kind: string, d: Details = {}): string {
     case "topup": return `Recarga · ${d.method ?? "Wallet"}`;
     case "credit": return "Credirecto · desembolso";
     case "credit_payment": return "Credirecto · abono";
+    case "tow_plan": return `TuGruero · ${d.product ?? ""}`;
     case "parking_meter": case "insurance": case "tickets": {
       const label = { parking_meter: "Parquímetro", insurance: "Seguro", tickets: "Boletería" }[kind];
       const qty = Number(d.quantity ?? 1);
@@ -303,7 +329,7 @@ const tools = {
     const valid = await Promise.all(["biometric", "pin", "otp"].map((f) => approvalProof(env, p, intent_id, f)));
     if (!proof || !valid.some((v) => safeEqual(v, proof)))
       return resp("denied", "No puedo confirmar esta operación.", {}, { code: "invalid_approval", message: "Prueba de aprobación inválida." });
-    const r = await wallet(env, p).execute(intent_id, proof);
+    const r = await wallet(env, p).execute(p, intent_id, proof);
     switch (r.result) {
       case "executed":
       case "replayed":
@@ -335,7 +361,7 @@ const tools = {
     // El saldo inicial se lista para que la cuenta siempre cuadre con el saldo.
     const opening = {
       operation_ref: "op_saldo_inicial", kind: "welcome", title: "Saldo inicial de la demo", amount_minor: INITIAL_WALLET_BALANCE_MINOR,
-      state: "settled", created_at: await w.openedAt(), details: {},
+      state: "settled", created_at: await w.openedAt(p), details: {},
     };
     return resp("ok", speech, { movements: [...movements, opening], balance_minor: bal });
   },
@@ -400,7 +426,7 @@ const tools = {
   },
   open_app_screen(screen_key: string, params: unknown) {
     const allowed = ["home", "wallet", "pagar_servicios", "parking", "donaciones", "enviar_fondos", "movimientos", "recargas", "club", "mis_pagos",
-      "escaner_qr", "menu", "credirecto", "depositar", "parquimetros", "seguros", "boleteria", "notificaciones", "racha", "asistencia", "mis_vehiculos", "mis_cuentas"];
+      "escaner_qr", "menu", "credirecto", "depositar", "parquimetros", "seguros", "boleteria", "notificaciones", "racha", "asistencia", "mis_vehiculos", "mis_cuentas", "tugruero", "jomi"];
     if (!allowed.includes(screen_key)) return resp("denied", null, {}, { code: "screen_not_allowed", message: "Pantalla no permitida." });
     return resp("ok", "Te llevo ahí.", { navigate: { screen_key, params: params ?? {} } });
   },
@@ -433,6 +459,15 @@ async function signedUrl(env: Env, agentId: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+async function supabaseState(env: Env): Promise<string> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return "sin configurar";
+  try {
+    const r = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/rpc/wisi_ping`, {
+      method: "POST", headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" }, body: "{}",
+    });
+    return r.ok ? "conectada" : r.status === 404 ? "falta ejecutar la migración 002" : `error ${r.status}`;
+  } catch { return "sin conexión"; }
 }
 async function conversationToken(env: Env, agentId: string): Promise<string | null> {
   if (!env.ELEVENLABS_API_KEY || !agentId) return null;
@@ -507,7 +542,7 @@ async function dispatchTool(env: Env, p: string, name: string, b: Body): Promise
 async function api(req: Request, env: Env, url: URL): Promise<Response> {
   const path = url.pathname;
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-  if (path === "/health") return json({ status: "ok", mode: "mock", runtime: "cloudflare-workers" });
+  if (path === "/health") return json({ status: "ok", mode: "mock", runtime: "cloudflare-workers", ...(url.searchParams.has("deep") ? { supabase: await supabaseState(env) } : {}) });
   if (req.method !== "POST") return fail(405, "method_not_allowed");
   if (path === "/api/session") return createSession(req, env, url);
 

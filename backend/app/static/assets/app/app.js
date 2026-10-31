@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=9";
+import { installFeatures } from "./features.js?v=10";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -117,10 +117,13 @@ const state = {
   credit: null,
   resume: null,        // operación a retomar tras recargar por saldo insuficiente
 };
-const LOGOS = { digitel: "digitel", movistar: "movistar", movilnet: "movilnet", corpoelec: "corpoelec", cantv: "cantv", simpletv: "simpletv", inter: "inter" };
+const LOGOS = Object.fromEntries(["digitel", "movistar", "movilnet", "corpoelec", "cantv", "simpletv", "inter", "thundernet", "tugruero", "dlm", "starmoviles", "fibex"].map((r) => [r, `/assets/pd/logos/${r}.png`]));
+LOGOS.globalsystem = "/assets/pd/svc/global_gps.png";
+LOGOS.jomi = "/assets/pd/svc/jomi_wordmark.png";
 const MY_SERVICES = ["digitel", "movilnet", "movistar", "corpoelec", "cantv"]; // «Mis pagos» de la cuenta demo
 const myServices = () => state.services.filter((s) => MY_SERVICES.includes(s.service_ref));
-const logoOf = (ref) => (LOGOS[ref] ? `/assets/pd/logos/${LOGOS[ref]}.png` : null);
+const logoOf = (ref) => LOGOS[ref] ?? null;
+const openService = (ref) => (ref === "jomi" || ref === "tugruero" ? push(ref) : push("pay", { service_ref: ref }));
 const CAT = { telefonia: "Telefonía", electricidad: "Electricidad", internet: "Internet y teléfono", tv: "Televisión", asistencia: "Asistencia", hogar: "Hogar", condominio: "Condominio" };
 const LOW_BALANCE_MINOR = 500_00;
 
@@ -302,13 +305,15 @@ function paintHomeServices() {
 }
 
 // --- movimientos
-const KIND_ICON = { payment: "#i-receipt", parking: "#i-car", donation: "#i-heart", transfer: "#i-send", topup: "#i-bank", credit: "#i-bank", credit_payment: "#i-bank", parking_meter: "#i-meter", insurance: "#i-shield", tickets: "#i-ticket", welcome: "#i-bank" };
+const KIND_ICON = { donation: "#i-heart", credit: "#i-bank", credit_payment: "#i-bank", insurance: "#i-shield", tickets: "#i-ticket", welcome: "#i-bank", tow_plan: "#i-car" };
+const KIND_IMG = { payment: "services_icon", parking: "parking_icon", parking_meter: "parking_meter_icon", transfer: "transfers_icon", topup: "recharge_icon" };
 let movFilter = "all";
 function moveRow(m) {
   const d = document.createElement("div");
   d.className = "item";
   const neg = m.amount_minor < 0;
-  d.innerHTML = `<span class="ic"><svg><use href="${KIND_ICON[m.kind] || "#i-receipt"}"/></svg></span><span class="tx"><b></b><small></small></span><span class="amt num"></span>`;
+  const icon = KIND_IMG[m.kind] ? `<span class="ic mv"><img src="/assets/pd/mov/${KIND_IMG[m.kind]}.png" alt="" /></span>` : `<span class="ic"><svg><use href="${KIND_ICON[m.kind] || "#i-receipt"}"/></svg></span>`;
+  d.innerHTML = `${icon}<span class="tx"><b></b><small></small></span><span class="amt num"></span>`;
   d.querySelector("b").textContent = m.title;
   d.querySelector("small").textContent = `${when(m.created_at)} · ${m.state === "settled" ? "Procesado" : m.state}`;
   const a = d.querySelector(".amt");
@@ -374,10 +379,22 @@ SCREENS.pagos = {
         return b;
       }));
     } else if (payFilter === "prog") {
-      $("payTotalLbl").textContent = "Programados";
-      $("payTotal").textContent = bs(0);
-      $("payTotalSub").textContent = "Sin pagos programados";
-      list.innerHTML = '<div class="empty"><b>No tienes pagos programados</b>Los pagos recurrentes llegarán pronto a esta demo.</div>';
+      const sched = storeJSON.get("pd.scheduled", []);
+      $("payTotalLbl").textContent = "Total programado";
+      $("payTotal").textContent = bs(sched.reduce((a, x) => a + x.amount_minor, 0));
+      $("payTotalSub").textContent = sched.length ? `${sched.length} pago${sched.length > 1 ? "s" : ""} programado${sched.length > 1 ? "s" : ""}` : "Sin pagos programados";
+      list.replaceChildren(...sched.map((x, i) => {
+        const d = document.createElement("div"); d.className = "item";
+        const src = logoOf(x.service_ref);
+        d.innerHTML = `<span class="ic ${src ? "logo" : ""}">${src ? `<img src="${src}" alt="" />` : '<svg><use href="#i-receipt"/></svg>'}</span><span class="tx"><b></b><small></small></span><span class="amt num"></span>`;
+        d.querySelector("b").textContent = x.name;
+        d.querySelector("small").textContent = `${x.date} · ${x.account}`;
+        d.querySelector(".amt").textContent = bs(x.amount_minor);
+        d.onclick = () => { if (confirm("¿Quitar este pago programado?")) { const l = storeJSON.get("pd.scheduled", []); l.splice(i, 1); storeJSON.set("pd.scheduled", l); SCREENS.pagos.enter(); } };
+        return d;
+      }));
+      const add = document.createElement("button"); add.type = "button"; add.className = "btn btn-ghost btn-block"; add.textContent = "+ Programar nuevo pago"; add.onclick = () => push("schedule");
+      list.append(add);
     } else {
       const paid = moves.filter((m) => m.kind === "payment");
       $("payTotalLbl").textContent = "Pagado en esta demo";
@@ -401,44 +418,10 @@ function paintServiceGrid() {
     b.type = "button"; b.className = "logo-card"; b.setAttribute("aria-label", s.name);
     const src = logoOf(s.service_ref);
     b.innerHTML = src ? `<img src="${src}" alt="" />` : `<span style="font-weight:600;font-size:17px">${s.name}</span>`;
-    b.onclick = () => (s.service_ref === "jomi" ? push("jomi") : push("pay", { service_ref: s.service_ref }));
+    b.onclick = () => openService(s.service_ref);
     return b;
   }));
 }
-let payCtx = null; // { svc, bound: {intent_id, acct, amount} }
-SCREENS.pay = {
-  enter(p = {}) {
-    const svc = state.services.find((s) => s.service_ref === p.service_ref) || state.services[0];
-    if (!svc) return;
-    payCtx = { svc, bound: p.intent_id ? { intent_id: p.intent_id, acct: p.account_number, amount: p.amount_minor } : null };
-    const src = logoOf(svc.service_ref);
-    $("payLogo").hidden = !src; if (src) $("payLogo").src = src;
-    $("payName").textContent = svc.name;
-    $("payCat").textContent = CAT[svc.category] || svc.category;
-    $("payAcct").value = p.account_number ?? "";
-    $("payAcct").removeAttribute("aria-invalid"); $("payAcctErr").hidden = true;
-    $("payAmt").value = fmt.format((p.amount_minor ?? svc.sample_pending_minor) / 100);
-    paintPayCta();
-  },
-};
-function paintPayCta() {
-  const amt = parseBs($("payAmt").value);
-  $("payGo").textContent = amt ? `Pagar ${bs(amt)}` : "Continuar";
-}
-$("payAmt").addEventListener("input", paintPayCta);
-$("payForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const acct = $("payAcct").value.trim();
-  const amt = parseBs($("payAmt").value);
-  $("payAcctErr").hidden = !!acct;
-  $("payAcct").toggleAttribute("aria-invalid", !acct);
-  if (!acct) return $("payAcct").focus();
-  if (!amt) { toast("Escribe un monto válido"); return $("payAmt").focus(); }
-  const b = payCtx.bound;
-  if (b && b.acct === acct && b.amount === amt) return confirmOp(b.intent_id, "ui");
-  await runPrepare("prepare_payment", { service_ref: payCtx.svc.service_ref, account_number: acct, amount_minor: amt }, $("payGo"));
-});
-
 // --- donaciones
 let donCtx = { ref: null, bound: null };
 function paintFoundations() {
@@ -560,6 +543,7 @@ const DONE = {
   parking_meter: (s) => ["Parquímetro activo", `${s.product ?? ""} · ${s.quantity ?? 1} h · ${s.plate ?? ""}`],
   insurance: (s) => ["Póliza activa", s.product ?? ""],
   tickets: (s) => ["Boletos comprados", `${s.product ?? ""} × ${s.quantity ?? 1}`],
+  tow_plan: (s) => ["Plan activo", `TuGruero · ${s.product ?? ""}`],
 };
 function showDone(op, res) {
   const [title, what] = (DONE[op.kind] || (() => ["¡Listo!", ""]))(op.s);
@@ -761,9 +745,9 @@ function scanFromUI() { startScan().then((r) => r && notifyAgent(`El usuario esc
 
 // ============================================================ operaciones (preparar → confirmar)
 const ops = new Map();
-const QTY_LABEL = (s) => (s.unit === "hora" ? `${s.quantity ?? 1} h${s.plate ? ` · ${s.plate}` : ""}` : s.unit === "boleto" ? `${s.quantity ?? 1} boleto(s)` : "1 mes");
-const PURCHASE_KIND = { parquimetros: "parking_meter", seguros: "insurance", boleteria: "tickets" };
-const PURCHASE_NAME = { parking_meter: "Parquímetro", insurance: "Seguro", tickets: "Boletería" };
+const QTY_LABEL = (s) => (s.section === "tugruero" ? `Plan por ${s.unit ?? "mes"}` : s.unit === "hora" ? `${s.quantity ?? 1} h${s.plate ? ` · ${s.plate}` : ""}` : s.unit === "boleto" ? `${s.quantity ?? 1} boleto(s)` : "1 mes");
+const PURCHASE_KIND = { parquimetros: "parking_meter", seguros: "insurance", boleteria: "tickets", tugruero: "tow_plan" };
+const PURCHASE_NAME = { parking_meter: "Parquímetro", insurance: "Seguro", tickets: "Boletería", tow_plan: "TuGruero" };
 const KIND = {
   prepare_payment: { kind: "payment", t: (s) => `Pago ${s.service ?? "servicio"}`, sub: (s) => (s.account_number ? `Cuenta ${s.account_number}` : "") },
   prepare_parking: { kind: "parking", t: () => "Estacionamiento", sub: (s) => `Ticket ${s.ticket_ref ?? ""}` },
@@ -824,6 +808,9 @@ function showOpInApp(op) {
       break;
     case "tickets":
       push("tickets", { product_ref: s.product_ref, quantity: s.quantity, intent_id: op.id });
+      break;
+    case "tow_plan":
+      push("tugruero", { product_ref: s.product_ref, intent_id: op.id });
       break;
     default:
       push("review", op);
@@ -926,7 +913,7 @@ function paramsOf(op) {
     case "payment": return { service_ref: state.services.find((x) => x.name === s.service)?.service_ref, account_number: s.account_number, amount_minor: s.amount_minor };
     case "donation": return { foundation_ref: state.foundations.find((x) => x.name === s.foundation)?.foundation_ref, amount_minor: s.amount_minor };
     case "transfer": return { recipient_ref: s.recipient_ref, amount_minor: s.amount_minor, kind: s.kind || "p2p" };
-    case "parking_meter": case "insurance": case "tickets": return { product_ref: s.product_ref, quantity: s.quantity, plate: s.plate };
+    case "parking_meter": case "insurance": case "tickets": case "tow_plan": return { product_ref: s.product_ref, quantity: s.quantity, plate: s.plate };
   }
   return null;
 }
@@ -940,7 +927,7 @@ async function freshOp(op) {
   if (state.resume === op.id) state.resume = fresh.id;
   // La UI sigue apuntando a la operación vigente.
   if (tkCtx?.intent_id === op.id) tkCtx.intent_id = fresh.id;
-  for (const c of [payCtx?.bound, donCtx.bound, sendCtx.bound]) if (c?.intent_id === op.id) c.intent_id = fresh.id;
+  for (const c of [state.payBound, donCtx.bound, sendCtx.bound]) if (c?.intent_id === op.id) c.intent_id = fresh.id;
   return fresh;
 }
 async function confirmOp(id, source) {
@@ -1089,13 +1076,13 @@ function add(who, text) {
   if (!text) return null;
   hideThinking();
   chat.querySelector(".hello")?.remove();
-  $("chips").hidden = true;
   const d = document.createElement("div");
   // «bot» y no «wisi»: .wisi es la hoja entera y sacaba la burbuja de la vista.
   d.className = "msg " + (who === "wisi" ? "bot" : who);
   d.textContent = text;
   chat.append(d);
   $("wisi").classList.toggle("tall", chat.querySelectorAll(".msg").length > 5);
+  paintChips(who === "wisi" && /\?\s*$/.test(text));
   scrollChat();
   if (who === "wisi") islandCaption("Wisi", text);
   if (who === "user") islandCaption("Tú", text);
@@ -1116,10 +1103,24 @@ function showThinking() {
   thinkTimer = setTimeout(hideThinking, 20000);
 }
 function hideThinking() { if (!thinkRow) return; thinkRow.stop(); thinkRow.row.remove(); thinkRow = null; }
+// Botones prearmados: siempre a mano y, si Wisi pregunta, primero Sí y No.
+const QUICK = [
+  ["Mi saldo", "¿Cuál es mi saldo?"], ["Escanear ticket", "Escanea el QR de mi ticket de estacionamiento"], ["Pagar la luz", "Quiero pagar la luz de Corpoelec"],
+  ["Recargar", "Quiero recargar mi wallet"], ["Credirecto", "¿Cuánto tengo disponible en Credirecto?"], ["Movimientos", "Muéstrame mis movimientos"],
+  ["Parquímetro", "Quiero pagar un parquímetro"], ["Seguros", "Quiero ver los seguros"], ["TuGruero", "Quiero un plan de TuGruero"], ["Enviar", "Quiero enviar dinero"], ["Donar", "Quiero hacer una donación"],
+];
+function paintChips(asked = false) {
+  const items = [...(asked ? [["Sí", "Sí"], ["No", "No"]] : []), ...QUICK];
+  $("chips").replaceChildren(...items.map(([label, say]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.say = say; b.textContent = label;
+    return b;
+  }));
+  $("chips").scrollLeft = 0;
+}
 function greet() {
   wisiStarted = true;
   chat.replaceChildren();
-  $("chips").hidden = false;
+  paintChips();
   $("wisi").classList.remove("tall");
   const h = document.createElement("div");
   h.className = "hello";
@@ -1133,7 +1134,23 @@ let Conversation = null, conv = null, mode = null, live = false, starting = null
 let voiceWanted = false, voiceRetries = 0, voiceSince = 0, replyTimer = 0, awaitingReply = null;
 const GREETING = /^¡Epa! Soy Wisi/;
 /** El agente dio señales de vida: cancela la respuesta de respaldo. */
-function agentAlive() { clearTimeout(replyTimer); awaitingReply = null; }
+function agentAlive() { clearTimeout(replyTimer); clearTimeout(toolTimer); awaitingReply = null; }
+const peers = new Set();
+// Colchón de audio en WebRTC: 150 ms de margen evitan los cortes cuando la red tiembla.
+if (window.RTCPeerConnection) {
+  const Native = window.RTCPeerConnection;
+  window.RTCPeerConnection = class extends Native {
+    constructor(...args) {
+      super(...args);
+      peers.add(this);
+      this.addEventListener("connectionstatechange", () => { if (this.connectionState === "closed") peers.delete(this); });
+      this.addEventListener("track", (e) => {
+        if (e.track.kind !== "audio") return;
+        try { e.receiver.jitterBufferTarget = 150; e.receiver.playoutDelayHint = 0.15; } catch {}
+      });
+    }
+  };
+}
 async function loadSDK() {
   if (Conversation) return Conversation;
   // Copia propia primero: la voz no depende de que un CDN externo esté arriba.
@@ -1160,8 +1177,10 @@ const SCREEN_MAP = {
   mis_vehiculos: () => { go("home"); push("vehicles"); },
   mis_cuentas: () => { go("home"); push("accounts"); },
   asistencia: () => { go("home"); push("help"); },
+  tugruero: () => { go("home"); push("tugruero"); },
+  jomi: () => { go("home"); push("jomi"); },
 };
-const CATALOG_SCREEN = { parquimetros: "meter", seguros: "insurance", boleteria: "tickets" };
+const CATALOG_SCREEN = { parquimetros: "meter", seguros: "insurance", boleteria: "tickets", tugruero: "tugruero" };
 const prep = (name) => async (p) => {
   const res = await callTool(name, p);
   if (res.status === "requires_confirmation") {
@@ -1221,21 +1240,58 @@ const safeTools = Object.fromEntries(Object.entries(clientTools).map(([name, fn]
   agentAlive();
   try { return await fn(p); }
   catch { return JSON.stringify({ status: "error", speech: "Hubo un problema de conexión y no se movió dinero. ¿Lo intentamos de nuevo?" }); }
+  finally { expectAfterTool(); }
 }]));
+// A veces el modelo recibe el resultado de la tool y se queda callado: se lo recordamos.
+let toolTimer = 0;
+function expectAfterTool() {
+  clearTimeout(toolTimer);
+  toolTimer = setTimeout(() => {
+    if (!conv) return;
+    console.warn("wisi: agente callado tras tool");
+    lastTyped = "(Continúa: dile al usuario el resultado en una frase.)";
+    try { conv.sendUserMessage(lastTyped); } catch {}
+  }, 2500);
+}
 function notifyAgent(text) { try { conv?.sendContextualUpdate(text); } catch {} }
 
 function setLive(on) {
   live = on;
   app.classList.toggle("live", on);
   $("btnMic").setAttribute("aria-label", on ? "Terminar conversación de voz" : "Hablar con Wisi");
-  if (on) { setStatus("Te escucho…", "live"); islandCaption("Wisi", "Te escucho…"); tickMeter(); }
+  if (on) { setStatus("Te escucho…", "live"); islandCaption("Wisi", "Te escucho…"); pauseFaces(true); tickMeter(); }
   else {
-    cancelAnimationFrame(meter);
+    clearTimeout(meter); clearTimeout(micTimer); clearTimeout(modeTimer);
+    micOff = false; agentSpoke = false; app.classList.remove("mic-off");
+    pauseFaces(false);
     document.querySelector(".wisi-head .av").style.setProperty("--lvl", 1);
     setStatus(voiceEnabled ? "En línea" : "Modo chat", "ok");
-    playFace("neutral");
   }
   paintIsland();
+}
+// Las animaciones del avatar compiten con el audio en móviles: en llamada se detienen.
+function pauseFaces(on) {
+  for (const f of faces.values()) { try { on ? f.anim?.pause() : (!reduced && f.anim?.play()); } catch {} }
+}
+// Micrófono de la llamada: apagarlo cierra tu turno y Wisi contesta; al terminar de
+// hablar se vuelve a abrir solo, como en una llamada.
+let micOff = false, agentSpoke = false, micTimer = 0, modeTimer = 0;
+function setMic(off) {
+  micOff = off;
+  app.classList.toggle("mic-off", off);
+  $("btnMic").setAttribute("aria-label", off ? "Encender micrófono" : "Apagar micrófono y esperar la respuesta");
+  // En WebRTC se manda silencio (el servidor ve que dejaste de hablar y cierra tu
+  // turno); dejar de publicar el audio lo deja esperando.
+  const senders = [...peers].flatMap((pc) => pc.getSenders()).filter((x) => x.track?.kind === "audio");
+  if (senders.length) for (const x of senders) x.track.enabled = !off;
+  else { try { conv?.setMicMuted(off); } catch {} }
+  clearTimeout(micTimer);
+  if (off) {
+    agentSpoke = false;
+    setStatus("Wisi va a responder…", "live");
+    // Si no había nada que responder, no te quedas esperando a oscuras.
+    micTimer = setTimeout(() => { if (micOff && !agentSpoke) setStatus("Micrófono apagado", "ok"); }, 5000);
+  } else setStatus("Te escucho…", "live");
 }
 function tickMeter() {
   if (!live || !conv) return;
@@ -1244,7 +1300,7 @@ function tickMeter() {
   const v = Math.min(1, Math.max(out, inp * 0.8));
   document.querySelector(".wisi-head .av").style.setProperty("--lvl", (1 + v * 0.35).toFixed(3));
   $$("#bars i").forEach((b, i) => b.style.setProperty("--h", Math.max(0.15, Math.min(1, v * (0.6 + ((i * 37) % 5) / 6) * 1.6)).toFixed(2)));
-  meter = requestAnimationFrame(tickMeter);
+  meter = setTimeout(tickMeter, 90); // suficiente para la vista; no roba hilo principal al audio
 }
 async function endConv() {
   const c = conv; conv = null; mode = null;
@@ -1277,8 +1333,14 @@ async function openConv(want) {
       onError: (m) => { console.warn("wisi:", m); },
       onModeChange: ({ mode: m }) => {
         if (!live) return;
-        setStatus(m === "speaking" ? "Hablando…" : "Te escucho…", "live");
-        playFace(m === "speaking" ? "pensando" : "neutral");
+        // El modo parpadea entre frases: solo cuenta como «terminó» si dura un momento.
+        clearTimeout(modeTimer);
+        if (m === "speaking") { agentSpoke = true; clearTimeout(micTimer); clearTimeout(toolTimer); hideThinking(); return setStatus("Hablando…", "live"); }
+        modeTimer = setTimeout(() => {
+          if (!live) return;
+          if (micOff && agentSpoke) return setMic(false);
+          if (!micOff) setStatus("Te escucho…", "live");
+        }, 700);
       },
       onMessage: ({ message, source }) => {
         if (source === "user") {
@@ -1395,6 +1457,8 @@ async function handleLocal(text) {
     if (a) return prepareLocal("prepare_topup", { method: /banco de venezuela|bdv/.test(t) ? "bdv" : /humaniz/.test(t) ? "humaniz" : /nacional/.test(t) ? "cuentas_nacionales" : "pago_movil", amount_minor: a });
     return open("deposit", "¿Cómo quieres recargar? Elige el método y el monto.");
   }
+  if (/gruero|grua/.test(t)) return open("tugruero", "Elige si es para tu vehículo o tu moto.");
+  if (/jomi|plomer|tecnico/.test(t)) return open("jomi", "¿Qué necesitas resolver?");
   if (/parquimetro/.test(t)) return open("meter", "Elige la zona, tu placa y las horas.");
   if (/seguro|poliza|rcv/.test(t)) return open("insurance", "Estas son las pólizas disponibles.");
   if (/boleto|boleteria|evento|entrada/.test(t)) return open("tickets", "Estos son los próximos eventos.");
@@ -1424,6 +1488,7 @@ async function handleLocal(text) {
     return prepareLocal("prepare_payment", { service_ref: SERVICES[svc], account_number: acct, amount_minor: /\d+\s*(bs|bol)/i.test(t) ? amountOf(t) : null });
   }
   if (/servicio|pagar|factura/.test(t)) { driveApp(); push("services"); showThinking(); return say((await callTool("list_services")).speech + " ¿Cuál pagamos?"); }
+  if (/^(si|sí|no)\b/.test(t)) return say("Revisa la pantalla: ahí confirmas con tu huella o cancelas.");
   if (/hola|buen|hey|epa/.test(t)) return say("¡Epa! ¿Qué hacemos hoy? Escaneo tu ticket, pago servicios, dono o envío fondos.");
   say("Puedo pagar tu estacionamiento, parquímetro y servicios, recargar tu wallet, pedir Credirecto, comprar seguros y boletos, donar o enviar fondos. ¿Qué necesitas?");
 }
@@ -1454,7 +1519,7 @@ async function ask(text) {
 
 // ============================================================ eventos globales
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-go],[data-push],[data-wisi],[data-soon],[data-ask],[data-voice],[data-more],[data-close],[data-back],[data-task-go]");
+  const t = e.target.closest("[data-go],[data-push],[data-wisi],[data-soon],[data-ask],[data-voice],[data-more],[data-close],[data-back],[data-task-go],[data-svc]");
   if (!t) return;
   const inSheet = t.closest(".sheet-wrap");
   if (inSheet && !t.matches("[data-more]")) closeSheet(inSheet.id);
@@ -1466,6 +1531,7 @@ document.addEventListener("click", (e) => {
     return push(t.dataset.push);
   }
   if (t.dataset.wisi !== undefined) return openWisi();
+  if (t.dataset.svc) return openService(t.dataset.svc);
   if (t.dataset.taskGo === "key") { haptic(20); toast("Llave de acceso activada"); return completeTask("key"); }
   if (t.dataset.taskGo === "car") return push("vehicles");
   if (t.dataset.soon) return toast(`${t.dataset.soon} no está en esta demo. Prueba Estacionamiento, Servicios, Donaciones o Enviar.`);
@@ -1487,12 +1553,16 @@ for (const g of $$("[data-voicesel]")) g.addEventListener("click", async (e) => 
   const v = e.target.closest("button")?.dataset.v;
   if (!v || v === voice) return;
   voice = v; store.set("wisi.voice", v); paintVoice(); haptic(6);
-  const who = v === "female" ? "Clari" : "Miguel";
-  if (live) { await endConv(); add("sys", `Cambiando a la voz de ${who}…`); startVoice(); }
-  else { if (conv) await endConv(); toast(`Voz de ${who} seleccionada`); }
+  // Sin avisos ni esperas: el botón ya muestra el cambio. La sesión vieja se cierra por detrás.
+  const old = conv, wasLive = live;
+  conv = null; mode = null;
+  if (wasLive) setLive(false);
+  old?.endSession().catch(() => {});
+  if (wasLive) startVoice();
 });
 // Un toque basta: mientras conecta, otro toque no cancela ni reinicia nada.
-$("btnMic").addEventListener("click", () => { if (micBusy) return; haptic(8); live ? endConv() : startVoice(); });
+$("btnMic").addEventListener("click", () => { if (micBusy) return; haptic(8); live ? setMic(!micOff) : startVoice(); });
+$("btnHang").addEventListener("click", () => { haptic(12); endConv(); });
 $("dock").addEventListener("submit", (e) => { e.preventDefault(); const t = $("text").value; $("text").value = ""; $("compose").classList.remove("has"); ask(t); });
 $("text").addEventListener("input", () => $("compose").classList.toggle("has", $("text").value.trim().length > 0));
 $("chips").addEventListener("click", (e) => { const s = e.target.closest(".chip")?.dataset.say; if (s) { haptic(6); ask(s); } });
@@ -1500,7 +1570,7 @@ $("btnReset").addEventListener("click", async () => { await endConv(); agentAliv
 $("btnResetDemo").addEventListener("click", async () => {
   await endConv();
   newPrincipal(); token = null;
-  for (const k of ["pd.bal", "pd.user", "pd.points", "pd.tasks", "pd.plates", "pd.accounts", "pd.seen"]) store.del(k);
+  for (const k of ["pd.bal", "pd.user", "pd.points", "pd.tasks", "pd.plates", "pd.accounts", "pd.seen", "pd.scheduled", "pd.directory", "pd.billing"]) store.del(k);
   ops.clear(); state.resume = null; state.credit = null; state.catalog = null; islandPinned = false; tkCtx = null;
   greet(); wisiStarted = false; paintIsland(); parkStep(0); paintUser(); paintClub();
   try { await newSession(false); await refreshBalance(true); await ctx.refreshCredit(); paintBell([]); toast(`Demo reiniciada: ${bs(state.balance)}`); }
@@ -1551,7 +1621,7 @@ function paintBell(moves) {
 
 const ctx = {
   $, $$, bs, fmt, parseBs, toast, store, storeJSON, push, pop, go, callTool, runPrepare, loadMovements, state, openWisi, haptic, when, makeThink,
-  confirmOp, scanFromUI, completeTask, user, points, paintUser,
+  confirmOp, scanFromUI, completeTask, user, points, paintUser, logoOf, moveRow, sleep,
   cancelOp(id) { const op = ops.get(id); if (op) { op.state = "off"; notifyAgent(`El usuario canceló ${op.k.t(op.s)}.`); } },
   paintBell: () => paintBell([]),
 };

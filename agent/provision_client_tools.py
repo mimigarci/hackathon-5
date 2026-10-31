@@ -109,9 +109,10 @@ def build_tools() -> list[dict]:
         client_tool(
             "list_catalog",
             "Lista opciones con precio de una sección: parquimetros (zonas, precio por hora), seguros "
-            "(pólizas; type=vehiculos|personas) o boleteria (eventos, precio por boleto). Abre esa pantalla.",
+            "(pólizas; type=vehiculos|personas), boleteria (eventos, precio por boleto) o tugruero (planes de grúa; "
+            "type=vehiculos_m|vehiculos_a|moto_m|moto_a). Abre esa pantalla.",
             {
-                "section": {"type": "string", "description": "Sección", "enum": ["parquimetros", "seguros", "boleteria"]},
+                "section": {"type": "string", "description": "Sección", "enum": ["parquimetros", "seguros", "boleteria", "tugruero"]},
                 "type": s("Solo seguros: vehiculos o personas"),
             },
             ["section"],
@@ -119,7 +120,7 @@ def build_tools() -> list[dict]:
         client_tool(
             "prepare_purchase",
             "Prepara (NO ejecuta) una compra del catálogo: parquímetro (quantity = horas, plate = placa), "
-            "póliza de seguro o boletos de un evento (quantity = boletos). El precio lo calcula el sistema.",
+            "póliza de seguro, plan de TuGruero o boletos de un evento (quantity = boletos). El precio lo calcula el sistema.",
             {
                 "product_ref": s("product_ref devuelto por list_catalog"),
                 "quantity": i("Horas de parquímetro o número de boletos (1 si es seguro)"),
@@ -185,7 +186,7 @@ def build_tools() -> list[dict]:
         client_tool(
             "open_app_screen",
             "Navega a una pantalla de la app: home, pagar_servicios, parking, escaner_qr, donaciones, "
-            "enviar_fondos, depositar, credirecto, parquimetros, seguros, boleteria, movimientos, "
+            "enviar_fondos, depositar, credirecto, parquimetros, seguros, boleteria, tugruero, jomi, movimientos, "
             "mis_pagos, notificaciones, racha, mis_vehiculos, mis_cuentas, asistencia o menu.",
             {"screen_key": s("Clave de la pantalla destino")},
             ["screen_key"],
@@ -222,19 +223,24 @@ def agent_config(voice_id: str, prompt: str, tools: list[dict], llm: str = "gemi
                 "tools": tools,
             },
         },
-        # Calidad de voz: normalización de montos/fechas por ElevenLabs, menos
-        # optimización de latencia (menos artefactos) y voz estable.
+        # Latencia mínima con voz estable: normalización en el prompt (la de ElevenLabs
+        # añade espera), streaming optimizado y turnos que se cierran antes.
         "tts": {
             "voice_id": voice_id,
             "model_id": TTS_MODEL,
-            "optimize_streaming_latency": 1,
+            "optimize_streaming_latency": 3,
             "stability": 0.55,
             "similarity_boost": 0.8,
             "speed": 1.0,
-            "text_normalisation_type": "elevenlabs",
+            "text_normalisation_type": "system_prompt",
         },
         "asr": {"quality": "high", "keywords": ASR_KEYWORDS},
-        "turn": {"turn_timeout": 8, "turn_eagerness": "normal"},
+        "turn": {
+            "turn_timeout": 20,
+            "turn_eagerness": "eager",
+            "speculative_turn": True,
+            "soft_timeout_config": {"timeout_seconds": 2.5, "message": "Déjame ver..."},
+        },
         "vad": {"background_voice_detection": True},
         "conversation": {"max_duration_seconds": 1800},
     }
