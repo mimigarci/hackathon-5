@@ -785,7 +785,8 @@ $("coGo").addEventListener("click", () => {
   orders.save([order, ...orders.all()].slice(0, 20));
   haptic([10, 40, 10]);
   notifyAgent(`El usuario armó la orden de compra ${order.id}: ${o.title}, ${credit.n} cuotas. No se cobró nada.`);
-  push("crorder", { id: order.id });
+  replace("crorder", { id: order.id }); // «Volver» lleva al área, no a armarla otra vez
+  paintCredit();
   toast("Orden armada");
 });
 let orderOpen = null;
@@ -806,8 +807,8 @@ $("orCancel").addEventListener("click", () => {
   orders.save(orders.all().filter((o) => o.id !== orderOpen));
   toast("Orden cancelada");
   pop();
-  if (stack.at(-1) === "croffer") pop();
-  if (stack.includes("crscan")) paintCredit();
+  paintCredit();
+  if (stack.at(-1) !== "crscan" && tab === "movs") SCREENS.movs.enter();
 });
 
 // --- éxito

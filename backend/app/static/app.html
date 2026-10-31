@@ -397,24 +397,6 @@
       </div>
     </section>
 
-    <!-- ============================ ORDEN DE COMPRA ============================ -->
-    <section class="screen push cr" id="s-crorder" aria-label="Orden de compra" inert>
-      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Orden de compra</h1><span></span></header>
-      <div class="scroll">
-        <article class="cr-detail">
-          <div class="top"><span class="cr-partner">SAGA</span><span class="cr-pill d">Armada</span></div>
-          <h2 id="orTitle"></h2>
-          <p class="txt num" id="orRef"></p>
-        </article>
-        <div class="cr-sec cr-quote" id="orBody"></div>
-        <p class="cr-note">Simulación: al armar la orden no se cobra nada. Se guarda solo en este navegador.</p>
-      </div>
-      <div class="sticky-cta" style="display:grid;gap:10px">
-        <button type="button" class="cr-go" data-go="movs">Ver en Movimientos</button>
-        <button type="button" class="btn btn-ghost btn-block" id="orCancel">Cancelar orden</button>
-      </div>
-    </section>
-
     <!-- ============================ OFERTA DE CRÉDITO ============================ -->
     <section class="screen push cr" id="s-croffer" aria-label="Detalle del crédito" inert>
       <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Armar orden</h1><span></span></header>
@@ -437,6 +419,24 @@
       <div class="sticky-cta">
         <button type="button" class="cr-go" id="coGo" aria-describedby="coWhy">Armar orden de compra</button>
         <p class="cr-why" id="coWhy"></p>
+      </div>
+    </section>
+
+    <!-- ============================ ORDEN DE COMPRA ============================ -->
+    <section class="screen push cr" id="s-crorder" aria-label="Orden de compra" inert>
+      <header class="navbar"><button type="button" class="circle" data-back aria-label="Volver"><svg><use href="#i-back"/></svg></button><h1>Orden de compra</h1><span></span></header>
+      <div class="scroll">
+        <article class="cr-detail">
+          <div class="top"><span class="cr-partner">SAGA</span><span class="cr-pill d">Armada</span></div>
+          <h2 id="orTitle"></h2>
+          <p class="txt num" id="orRef"></p>
+        </article>
+        <div class="cr-sec cr-quote" id="orBody"></div>
+        <p class="cr-note">Simulación: al armar la orden no se cobra nada. Se guarda solo en este navegador.</p>
+      </div>
+      <div class="sticky-cta" style="display:grid;gap:10px">
+        <button type="button" class="cr-go" data-go="movs">Ver en Movimientos</button>
+        <button type="button" class="btn btn-ghost btn-block" id="orCancel">Cancelar orden</button>
       </div>
     </section>
 
