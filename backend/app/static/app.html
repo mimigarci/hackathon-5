@@ -15,8 +15,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="/assets/app/app.css?v=14" />
-<link rel="stylesheet" href="/assets/app/credit.css?v=14" />
+<link rel="stylesheet" href="/assets/app/app.css?v=15" />
+<link rel="stylesheet" href="/assets/app/credit.css?v=15" />
 </head>
 <body>
 <!-- Iconos (trazo 1.8, mismo lenguaje que la app) -->
@@ -119,6 +119,20 @@
         </div>
 
         <button type="button" class="low-bal" id="lowBal" data-push="deposit" hidden><svg aria-hidden="true"><use href="#i-plus"/></svg><span><b>Tu saldo está bajo</b>Recarga y gana +50 pts del Club</span><svg class="chev" aria-hidden="true"><use href="#i-chev"/></svg></button>
+
+        <!-- Credirecto en tres capas, a la vista sin deslizar: cada capa abre el escáner en su grupo -->
+        <section class="sec" aria-labelledby="h-crhome">
+          <div class="sec-h"><h2 id="h-crhome">Créditos para ti</h2><span class="demo-tag">Simulado</span></div>
+          <div class="cr-home">
+            <p class="cr-home-lead">Tu Credirecto en tres capas, en Pago Directo y sus aliados.</p>
+            <div class="cr-tiers">
+              <button type="button" class="cr-tier" data-crpiso="1"><b>Día a día</b><small>Servicios, tickets, TuGruero y Seguros Mercantil</small><span class="num js-cr-t1">—</span></button>
+              <button type="button" class="cr-tier" data-crpiso="2"><b>Viajes</b><small>Planes de SAGA y hospedaje en Estei</small><span class="num js-cr-t2">—</span></button>
+              <button type="button" class="cr-tier" data-crpiso="3"><b>Carro y casa</b><small>Conduce y Propiedash, con banco aliado</small><span>Precalifícate</span></button>
+            </div>
+            <button type="button" class="cr-home-scan" data-crpiso="0"><svg aria-hidden="true"><use href="#i-credit"/></svg>Escanear mis créditos</button>
+          </div>
+        </section>
 
         <section class="sec" aria-labelledby="h-club">
           <div class="sec-h"><h2 id="h-club">Club PagoDirecto</h2><span class="demo-tag js-points">0 pts</span></div>
@@ -531,6 +545,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script type="module" src="/assets/app/app.js?v=14"></script>
+<script type="module" src="/assets/app/app.js?v=15"></script>
 </body>
 </html>
