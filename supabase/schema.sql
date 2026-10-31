@@ -1,4 +1,5 @@
--- PagoDirecto hackathon schema. Paste into Supabase > SQL Editor and run.
+-- PagoDirecto hackathon schema. Paste into Supabase > SQL Editor and run,
+-- then run every file in supabase/migrations/ in order.
 -- Matches the models in app/lib/data/models.dart and the queries in
 -- app/lib/data/supabase_repository.dart.
 
@@ -120,6 +121,9 @@ create policy "own club progress" on public.user_club_tasks for all
 
 -- ---------------------------------------------------------------------------
 -- New users get a profile + empty wallet automatically.
+-- migrations/001_google_login.sql replaces this trigger for Google sign-in
+-- (Google name/photo, no username collisions, demo data): run it right after
+-- this file.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.handle_new_user()

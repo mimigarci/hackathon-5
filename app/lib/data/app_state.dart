@@ -6,9 +6,12 @@ import 'repository.dart';
 /// App-wide data, loaded once from the repository and refreshable with
 /// pull-to-refresh. Read it with `AppScope.of(context)`.
 class AppState extends ChangeNotifier {
-  AppState(this.repository);
+  AppState(this.repository, {this.onSignOut});
 
   final AppRepository repository;
+
+  /// Ends the session (Supabase sign-out, or leaving demo mode).
+  final Future<void> Function()? onSignOut;
 
   bool loading = true;
   Object? error;

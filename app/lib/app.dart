@@ -1,43 +1,34 @@
 import 'package:flutter/material.dart';
 
-import 'data/app_state.dart';
+import 'auth/auth_gate.dart';
 import 'data/repository.dart';
 import 'screens/main_shell.dart';
 import 'theme/app_theme.dart';
 
-class PagoDirectoApp extends StatefulWidget {
+class PagoDirectoApp extends StatelessWidget {
   const PagoDirectoApp({
     super.key,
-    required this.repository,
+    this.repository,
+    this.supabaseReady = false,
     this.useGoogleFonts = true,
   });
 
-  final AppRepository repository;
+  /// Skips the login and opens the app on this data (tests, previews).
+  final AppRepository? repository;
+
+  /// Supabase initialized, so the login uses Google.
+  final bool supabaseReady;
   final bool useGoogleFonts;
 
   @override
-  State<PagoDirectoApp> createState() => _PagoDirectoAppState();
-}
-
-class _PagoDirectoAppState extends State<PagoDirectoApp> {
-  late final _state = AppState(widget.repository)..load();
-
-  @override
-  void dispose() {
-    _state.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AppScope(
-      state: _state,
-      child: MaterialApp(
-        title: 'PagoDirecto',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(useGoogleFonts: widget.useGoogleFonts),
-        home: const MainShell(),
-      ),
+    return MaterialApp(
+      title: 'PagoDirecto',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(useGoogleFonts: useGoogleFonts),
+      home: repository != null
+          ? SignedInScope(repository: repository!, child: const MainShell())
+          : AuthGate(supabaseReady: supabaseReady),
     );
   }
 }
