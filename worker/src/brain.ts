@@ -188,7 +188,8 @@ export function routeN0(text: string): BrainResult | null {
 
 type FetchFn = typeof fetch;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const TIMEOUT_MS = 6000;
+// Si el modelo no contesta en 2 s, responde el agente: mejor eso que hacer esperar en el chat.
+const TIMEOUT_MS = 2000;
 
 export interface ChatOut { content: string; model?: string; cost?: number }
 
