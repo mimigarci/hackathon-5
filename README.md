@@ -74,16 +74,23 @@ npx vercel deploy build/web --prod
 The Edge Functions deploy to Supabase separately (`supabase functions deploy`,
 `supabase secrets set`) and must allow the Vercel domain in their CORS headers.
 
-### Supabase setup (MVP, no login)
+### Supabase setup (Google login)
 
-1. Supabase dashboard → **SQL Editor** → run `supabase/schema.sql`.
-2. **Authentication → Sign In / Providers → enable "Allow anonymous sign-ins"**.
-3. In `main.dart`, call `Supabase.instance.client.auth.signInAnonymously()` when
-   there's no session. The user never sees a login. They get a real user id,
-   the `handle_new_user` trigger creates their profile and wallet, and row
-   level security keeps working unchanged. The session persists on the device.
-4. Seed demo data for that user (balance, registered services, pending
-   payments) from the SQL Editor so the assistant has something to act on.
+1. Supabase dashboard → **SQL Editor** → run `supabase/schema.sql`, then every
+   file in `supabase/migrations/` in order (`001_google_login.sql` replaces the
+   sign-up trigger).
+2. **Authentication → Sign In / Providers → Google**: enable it with the client
+   ID and secret of a Google Cloud OAuth client whose authorized redirect URI is
+   `https://<project>.supabase.co/auth/v1/callback`.
+3. **Authentication → URL Configuration → Redirect URLs**: add
+   `io.pagodirecto.app://login-callback` (Android/iOS, see `lib/auth/auth_gate.dart`)
+   and every web origin you use (e.g. `http://localhost:<port>`, the Vercel domain).
+4. Any Google account can sign in. The `handle_new_user` trigger creates the
+   profile (Google name, email, photo) and wallet and seeds demo data (balance,
+   movements, registered services, pending payments) so the assistant has
+   something to act on. Row level security keeps each user to their own rows.
+
+Without Supabase config, the login screen's button enters demo mode on mock data.
 
 ---
 
