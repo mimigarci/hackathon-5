@@ -50,6 +50,18 @@ Para correr el gateway FastAPI (p. ej. en el VPS) en lugar del Worker:
 (crea el túnel y el DNS; requiere permisos Cloudflare Tunnel: Edit y DNS: Edit). Antes, quitar
 los dominios propios del Worker para liberar `botflow.lat`.
 
+## Monitorización
+`.github/workflows/uptime.yml` comprueba cada 30 min desde GitHub: DNS IPv4, `/health`, la webapp,
+un asset Lottie, la redirección a HTTPS, la API y que la voz (ElevenLabs) esté disponible. Si falla,
+GitHub envía un email. Los workflows programados solo corren desde `main` (se activa al fusionar el PR);
+también se puede lanzar a mano (*Run workflow*).
+
+## Si "no carga" en un dispositivo concreto
+Si un dispositivo consultó `botflow.lat` antes de que existiera el registro, su DNS guarda la
+respuesta negativa hasta 30 min (TTL mínimo del SOA). Se arregla solo; para forzarlo, vaciar la
+caché DNS (en un equipo con Tailscale: `sudo systemctl restart tailscaled`) o activar y desactivar el
+modo avión en el móvil. Comprobación: `dig +short A botflow.lat @1.1.1.1`.
+
 ## Notas
 - **Créditos de ElevenLabs**: límite de sesiones de voz por IP (`WISIVOZ_SIGNED_PER_IP_10MIN`,
   30 por defecto; best-effort por instancia). Al superarlo, la webapp sigue en modo chat.
