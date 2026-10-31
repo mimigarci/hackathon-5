@@ -3,7 +3,7 @@
 // Wisi conduce la app (navega, rellena, escanea QR) y la app confirma el dinero
 // con la hoja biométrica. El modelo nunca ejecuta pagos: solo prepara intenciones.
 
-import { installFeatures } from "./features.js?v=16";
+import { installFeatures } from "./features.js?v=17";
 
 const GW = location.origin;
 const $ = (id) => document.getElementById(id);
@@ -1522,6 +1522,7 @@ const clientTools = {
   // Credirecto: el motor del Worker decide; la app solo muestra y pide la huella.
   get_credit_status: async () => JSON.stringify(await refreshCredit()),
   scan_credit_offers: async () => { driveApp(); push("crscan"); return JSON.stringify(await scanCredit()); },
+  answer_credit_question: async (p) => JSON.stringify(await callTool("answer_credit_question", p)),
   quote_credit: async (p) => JSON.stringify(await callTool("quote_credit", p)),
   prepare_credit_offer: prep("prepare_credit_offer"),
   precalify_credit: async (p) => {
@@ -1826,6 +1827,7 @@ async function handleLocal(text) {
 // Normas completas en docs/wisi-cerebro.md: resolver con el nivel más barato que acierte.
 //   N0 reglas locales (aquí, 0 costo) -> N1/N2 /api/brain (Worker, OpenRouter) -> N3 agente de voz.
 // Ningún modelo decide dinero ni crédito: solo elige la acción; el usuario confirma con su huella.
+const CREDIT_ASK = /credit|credirecto|cuota|financ|prestamo|\blinea\b|\binicial\b|\bintereses?\b|rechaz|\bpin\b|\bclave\b/;
 const CREDIT_STRONG = /credit|credirecto|cuota|financ|prestamo|hipoteca/;
 const CREDIT_WEAK = /\bcarro\b|vehiculo|viaje|roques|margarita|merida|\bsaga\b|estei|conduce|propiedash|tugruero|mercantil|\bseguros?\b/;
 // «Escanea mis créditos» y los nombres de aliados van al escáner; «mi Credirecto» o «cuánto debo», a la línea de la wallet.
@@ -1934,8 +1936,15 @@ async function ask(text) {
   if (!text) return;
   if (!wisiStarted) greet();
   add("user", text);
-  // Explicar una decisión de crédito lo resuelve el cerebro (credito_explicar), no el N0 local.
+  // Preguntas de crédito: respuesta preparada al instante, en el chat y sin cambiar de pantalla.
   const tn = norm(text);
+  if (CREDIT_ASK.test(tn)) {
+    try {
+      const a = await callTool("answer_credit_question", { text });
+      if (a.data?.matched) { hideThinking(); return say(a.speech); }
+    } catch {}
+  }
+  // Explicar una decisión de crédito lo resuelve el cerebro (credito_explicar), no el N0 local.
   if (CREDIT_STRONG.test(tn) && /\b(por que|porque|explica\w*|como funciona)\b/.test(tn) && await brainRoute(text)) return;
   // N0: crédito por reglas (va antes que «escanea», que si no abriría el escáner QR).
   if (await creditN0(text)) return;

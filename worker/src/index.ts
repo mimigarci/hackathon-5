@@ -15,6 +15,7 @@ import {
 import { checkOffer, demoState, findOffer, lineOf, lines, nextInstallment, planFor, precalifyInfo, quote, scanOffers } from "./credit.ts";
 import type { CreditState, Plan } from "./credit.ts";
 import { DAILY_CAP, think } from "./brain.ts";
+import { answerCredit } from "./credit-texts.ts";
 
 export interface Env {
   ASSETS: Fetcher;
@@ -420,6 +421,12 @@ const tools = {
       `Cotidianas: ${per(1)}, turismo: ${per(2)}, patrimonio: ${per(3)}. Todo es una simulación.`;
     return resp("ok", speech, { offers, summary });
   },
+  /** Pregunta de crédito con respuesta preparada; matched=false si no es de aquí. */
+  async answer_credit_question(env: Env, p: string, text: string) {
+    const { state, plans } = await wallet(env, p).creditView();
+    const a = answerCredit(text, state, scanOffers(state, new Date()).offers, plans);
+    return resp("ok", a?.reply ?? null, { matched: !!a, intent: a?.intent ?? null });
+  },
   async quote_credit(env: Env, p: string, offer_id: string, installments: unknown) {
     const { state } = await wallet(env, p).creditView();
     const q = quote(offer_id, installments, state, new Date());
@@ -681,6 +688,7 @@ async function dispatchTool(env: Env, p: string, name: string, b: Body): Promise
     case "open_app_screen": return tools.open_app_screen(b.screen_key ?? "", b.params);
     case "get_credit_status": return tools.get_credit_status(env, p);
     case "scan_credit_offers": return tools.scan_credit_offers(env, p);
+    case "answer_credit_question": return tools.answer_credit_question(env, p, b.text ?? "");
     case "quote_credit": return tools.quote_credit(env, p, b.offer_id ?? "", b.installments);
     case "prepare_credit_offer": return tools.prepare_credit_offer(env, p, b.offer_id ?? "", b.installments);
     case "precalify_credit": return tools.precalify_credit(env, p, b.offer_id ?? "");

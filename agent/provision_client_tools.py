@@ -201,6 +201,14 @@ def build_tools() -> list[dict]:
             [],
         ),
         client_tool(
+            "answer_credit_question",
+            "Responde preguntas sobre crédito con el texto oficial y los datos del motor: por qué se aprobó o "
+            "rechazó una oferta, intereses, inicial, cuotas, requisitos, quién presta, atrasos, nivel y línea. "
+            "Si matched es false, responde con lo que sepas sin inventar condiciones.",
+            {"text": s("La pregunta del usuario, con sus palabras")},
+            ["text"],
+        ),
+        client_tool(
             "scan_credit_offers",
             "Escanea los créditos posibles en todo el ecosistema: servicios, estacionamiento, boletería, "
             "TuGruero, Seguros Mercantil, viajes de SAGA y Estei, vehículos de Conduce e inmuebles de "
