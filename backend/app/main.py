@@ -82,18 +82,41 @@ def health() -> dict[str, Any]:
 
 
 @app.post("/api/session")
-def create_session(principal: str = "demo-user") -> dict[str, Any]:
+async def create_session(principal: str = "demo-user") -> dict[str, Any]:
     """Emite el token de sesión efímero y los datos de voz del agente.
 
     En producción, `principal` sale de la sesión autenticada de la app, no de un
-    parámetro. El agent_id/signed_url conectan el cliente con la voz de Wisi.
+    parámetro. Devuelve una `signed_url` de ElevenLabs cuando hay credenciales,
+    para que el agent_id nunca se exponga en el cliente.
     """
+    signed_url = await _elevenlabs_signed_url()
     return {
         "session_token": issue_session_token(principal),
         "principal": principal,
         "elevenlabs_agent_id": settings.elevenlabs_agent_id or "<set ELEVENLABS_AGENT_ID>",
-        "voice_enabled": bool(settings.elevenlabs_api_key),
+        "signed_url": signed_url,
+        "voice_enabled": bool(signed_url),
     }
+
+
+async def _elevenlabs_signed_url() -> str | None:
+    """Pide a ElevenLabs una URL firmada para la conversación (server-side)."""
+    if not (settings.elevenlabs_api_key and settings.elevenlabs_agent_id):
+        return None
+    import httpx
+
+    url = "https://api.elevenlabs.io/v1/convai/conversation/get-signed-url"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                url,
+                params={"agent_id": settings.elevenlabs_agent_id},
+                headers={"xi-api-key": settings.elevenlabs_api_key},
+            )
+            r.raise_for_status()
+            return r.json().get("signed_url")
+    except Exception:
+        return None
 
 
 # ---- API REST para clientes (Flutter / React) --------------------------------
