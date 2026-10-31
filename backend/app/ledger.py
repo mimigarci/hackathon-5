@@ -53,7 +53,13 @@ class Operation:
 class Account:
     principal: str
     balance_minor: int
+    credit_used_minor: int = 0
+    opened_at: float = field(default_factory=time.time)
     operations: list[Operation] = field(default_factory=list)
+
+
+# Operaciones que suman al saldo (recarga simulada y desembolso de crédito).
+CREDIT_KINDS = {"topup", "credit"}
 
 
 class Ledger:
@@ -117,7 +123,7 @@ class Ledger:
         """Ejecuta una intención de forma idempotente.
 
         Devuelve (resultado, operación) donde resultado ∈
-        {executed, replayed, expired, insufficient_funds, not_found}.
+        {executed, replayed, expired, insufficient_funds, credit_limit, not_found}.
         """
         with self._lock:
             # idempotencia: misma prueba -> misma operación, no se duplica
@@ -135,11 +141,17 @@ class Ledger:
 
             total = intent.amount_minor + intent.fee_minor
             acc = self.account(intent.principal)
-            if acc.balance_minor < total:
+            if intent.kind == "credit":
+                if acc.credit_used_minor + total > fixtures.CREDIT_LIMIT_MINOR:
+                    return "credit_limit", None  # type: ignore[return-value]
+                acc.credit_used_minor += total
+            elif acc.balance_minor < total:
                 return "insufficient_funds", None  # type: ignore[return-value]
+            if intent.kind == "credit_payment":
+                acc.credit_used_minor = max(0, acc.credit_used_minor - total)
 
-            # debitar y registrar
-            acc.balance_minor -= total
+            # mover saldo y registrar
+            acc.balance_minor += total if intent.kind in CREDIT_KINDS else -total
             op = Operation(
                 operation_ref=f"op_{uuid.uuid4().hex[:16]}",
                 intent_id=intent.intent_id,

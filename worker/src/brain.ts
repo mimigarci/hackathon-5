@@ -25,7 +25,7 @@ export interface BrainResult {
 
 export const DEFAULT_FAST = "mistralai/mistral-nemo,meta-llama/llama-3.1-8b-instruct,openai/gpt-oss-20b";
 export const DEFAULT_SMART = "anthropic/claude-haiku-5.5";
-export const SCREENS = ["home", "wallet", "pagar_servicios", "parking", "donaciones", "enviar_fondos", "movimientos", "recargas", "club", "mis_pagos", "credirecto"];
+export const SCREENS = ["home", "wallet", "pagar_servicios", "parking", "donaciones", "enviar_fondos", "movimientos", "recargas", "club", "mis_pagos", "credirecto", "escanear_creditos"];
 export const DAILY_CAP = { n1: 40, n2: 10 };
 
 export function parseModels(value: string | undefined, fallback: string): string[] {
@@ -124,7 +124,7 @@ const FOUNDATION_WORDS: [RegExp, string][] = [
   [/fundana/, "fundana"], [/senosayuda|senos ayuda/, "senosayuda"], [/banco de alimentos|alimentos/, "banco_alimentos"],
 ];
 const SCREEN_WORDS: [RegExp, string][] = [
-  [/credirecto|creditos/, "credirecto"], [/billetera|wallet/, "wallet"], [/pagar servicios|servicios/, "pagar_servicios"],
+  [/escaner de creditos|escanear creditos/, "escanear_creditos"], [/credirecto|creditos/, "credirecto"], [/billetera|wallet/, "wallet"], [/pagar servicios|servicios/, "pagar_servicios"],
   [/parking|estacionamiento/, "parking"], [/donaciones|donar/, "donaciones"], [/enviar fondos|enviar dinero/, "enviar_fondos"],
   [/movimientos|historial/, "movimientos"], [/recargas?/, "recargas"], [/club/, "club"], [/mis pagos/, "mis_pagos"],
   [/\bhome\b|inicio|principal/, "home"],

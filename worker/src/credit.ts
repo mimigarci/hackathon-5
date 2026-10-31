@@ -5,6 +5,8 @@
  * Montos en céntimos (enteros). Fechas YYYY-MM-DD.
  */
 
+import { CREDIT_LIMIT_MINOR } from "./fixtures.ts";
+
 export type Level = "Turista" | "Explorador" | "Embajador";
 export type OfferStatus = "disponible" | "precalificado" | "por_desbloquear";
 export type Piso = 1 | 2 | 3;
@@ -59,7 +61,8 @@ export const CATALOG: CatalogItem[] = [
 export const findOffer = (offer_id: string) => CATALOG.find((c) => c.offer_id === offer_id);
 export const lineOf = (piso: Piso): LineKey | null => (piso === 1 ? "cotidiano" : piso === 2 ? "turismo" : null);
 
-const COTIDIANO_LIMIT: Record<Level, number> = { Turista: 150000, Explorador: 300000, Embajador: 600000 };
+// La línea cotidiana es la de la wallet (CREDIT_LIMIT_MINOR para Turista); los demás niveles, en proporción.
+const COTIDIANO_LIMIT: Record<Level, number> = { Turista: CREDIT_LIMIT_MINOR, Explorador: CREDIT_LIMIT_MINOR * 2, Embajador: CREDIT_LIMIT_MINOR * 4 };
 // El contrato fija Turista y Explorador; Embajador es una extrapolación (ver informe).
 const TURISMO_RULE: Record<Level, { pct: number; limit: number }> = {
   Turista: { pct: 40, limit: 300000 },

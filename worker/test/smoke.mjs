@@ -157,6 +157,15 @@ await step("precalify conduce_corolla", async () => {
   );
 });
 
+await step("la herramienta del escáner es prepare_credit_offer (prepare_credit es el desembolso de efectivo)", async () => {
+  const a = await post("/api/tool/prepare_credit_offer", { offer_id: "conduce_corolla", installments: 48 });
+  const b = await post("/api/tool/prepare_credit", { amount_minor: 0 });
+  return first(
+    expect(a.status === "denied" && a.error?.code === "bank_channel", `prepare_credit_offer: ${JSON.stringify(a)}`),
+    expect(b.status === "denied" && b.error?.code === "invalid_amount", `prepare_credit (efectivo): ${JSON.stringify(b)}`),
+  );
+});
+
 await step("prepare conduce_corolla da bank_channel", async () => {
   const r = await tool("prepare", { offer_id: "conduce_corolla", installments: 48 });
   return expect(r.status === "denied" && r.error?.code === "bank_channel", JSON.stringify(r));

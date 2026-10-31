@@ -205,3 +205,14 @@
 @media (prefers-reduced-motion: reduce) {
   .cr-bar > span { transition: none; }
 }
+
+/* ---------------------------------------------------------------- acceso al escáner (dentro de Credirecto) */
+.cr-promo {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 4px;
+  padding: 20px 18px 18px; border-radius: 28px; color: var(--cr-ink);
+  background: linear-gradient(140deg, var(--cr-bg-a), var(--cr-bg-b));
+  box-shadow: var(--shadow-card), inset 0 0 0 1.5px var(--cr-ring);
+}
+.cr-promo h3 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; color: var(--cr-ink); }
+.cr-promo p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--cr-ink-2); }
+.cr-promo .cr-go { margin-top: 12px; width: 100%; }

@@ -15,8 +15,8 @@ test("escaneo del perfil demo", () => {
   const { offers, summary } = scanOffers(demoState(), NOW);
   assert.equal(offers.length, 11);
   assert.equal(find("svc_condominio").status, "disponible");
-  assert.equal(find("svc_condominio").reason, "Aprobado: Bs 1.200,00 cabe en tu línea disponible de Bs 1.500,00");
-  assert.equal(find("mercantil_rcv").status, "disponible"); // 1.400 <= 1.500
+  assert.equal(find("svc_condominio").reason, "Aprobado: Bs 1.200,00 cabe en tu línea disponible de Bs 2.000,00");
+  assert.equal(find("mercantil_rcv").status, "disponible"); // 1.400 <= 2.000
   assert.equal(find("saga_roques").down_payment_minor, 192000);
   assert.equal(find("saga_roques").financed_minor, 288000);
   assert.equal(find("conduce_corolla").status, "precalificado");
