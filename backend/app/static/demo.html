@@ -2,83 +2,219 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#e6005c" />
 <title>Wisi · PagoDirecto</title>
 <style>
-  :root{--pd:#e6005c;--pd2:#ff2e7e;--ink:#0d1b2a;--bg:#f5f6f8;--card:#ffffff;--muted:#8a90a0;--line:#eceef2}
+  :root{
+    --pd:#e6005c; --pd2:#ff2e7e; --ink:#101426; --ink-soft:#5b6176;
+    --bg:#eef0f4; --card:#ffffff; --muted:#9aa0b0; --line:#e9ebf1;
+    --ok:#17b26a; --shadow:0 10px 30px rgba(16,20,38,.12);
+    --radius:20px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#f3f4f8; --ink-soft:#aeb3c2; --bg:#0b0d14; --card:#161a26;
+      --muted:#7a8094; --line:#232838; --shadow:0 10px 30px rgba(0,0,0,.5);
+    }
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-  .wrap{max-width:460px;margin:0 auto;padding:16px 16px 32px;min-height:100vh;display:flex;flex-direction:column}
-  header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .face{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#ffe3ee,#ffd1e3);display:grid;place-items:center;overflow:hidden;box-shadow:0 4px 14px #e6005c33;flex:none}
-  .face lottie-player,.face img{width:100%;height:100%;object-fit:contain}
-  h1{font-size:17px;margin:0;font-weight:800}
-  small{color:var(--muted)}
-  .seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
-  .seg button{border:none;border-radius:0;background:transparent;color:var(--ink);padding:8px 12px;font-size:13px}
-  .seg button.on{background:var(--pd);color:#fff}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  button{background:var(--card);color:var(--ink);border:1px solid var(--line);padding:10px 14px;border-radius:12px;cursor:pointer;font-size:14px}
-  button:hover{border-color:var(--pd)}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  button.primary{background:linear-gradient(135deg,var(--pd),var(--pd2));border:none;color:#fff;font-weight:700}
-  .balcard{background:linear-gradient(135deg,var(--pd),var(--pd2));color:#fff;border-radius:18px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px #e6005c33}
-  .balcard b{font-size:22px;display:block}
-  #chat{flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding:4px 0;min-height:180px}
-  .b{padding:10px 14px;border-radius:16px;max-width:85%;font-size:14px;line-height:1.45;white-space:pre-wrap}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, #ffd1e333, transparent),
+      radial-gradient(900px 500px at -10% 110%, #ff2e7e22, transparent),
+      var(--bg);
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  /* En desktop: marco tipo móvil centrado. En móvil: pantalla completa. */
+  .app{
+    width:100%; max-width:440px; margin:0 auto; min-height:100dvh;
+    display:flex; flex-direction:column; background:var(--card);
+    position:relative; overflow:hidden;
+  }
+  @media (min-width:600px){
+    body{display:grid; place-items:center; padding:24px}
+    .app{min-height:0; height:min(860px,94dvh); border-radius:34px;
+      box-shadow:var(--shadow); border:1px solid var(--line)}
+  }
+
+  /* Header */
+  header{
+    display:flex; align-items:center; gap:12px; padding:16px 16px 12px;
+    padding-top:max(16px,env(safe-area-inset-top));
+    background:linear-gradient(180deg,var(--card),transparent); z-index:3;
+  }
+  .face{width:46px;height:46px;border-radius:50%;flex:none;overflow:hidden;
+    background:linear-gradient(135deg,#ffe3ee,#ffd1e3);display:grid;place-items:center;
+    box-shadow:0 4px 14px #e6005c33}
+  .face svg,.face img{width:100%;height:100%;object-fit:contain}
+  .htxt{flex:1;min-width:0}
+  .htxt h1{font-size:16px;margin:0;font-weight:800;letter-spacing:-.2px}
+  .statusline{display:flex;align-items:center;gap:6px;color:var(--ink-soft);font-size:12px;margin-top:1px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 3px #17b26a33}
+  .dot.live{background:var(--pd);animation:blink 1.1s infinite}
+  @keyframes blink{50%{opacity:.35}}
+
+  /* Selector de voz */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--bg);padding:3px;gap:2px}
+  .seg button{border:none;background:transparent;color:var(--ink-soft);
+    padding:7px 11px;font-size:12.5px;font-weight:600;border-radius:999px;cursor:pointer;line-height:1;transition:.15s}
+  .seg button.on{background:var(--pd);color:#fff;box-shadow:0 2px 8px #e6005c55}
+
+  /* Tarjeta de saldo */
+  .balcard{margin:4px 16px 8px;border-radius:var(--radius);padding:16px 18px;color:#fff;
+    background:linear-gradient(135deg,#e6005c,#ff4b93);box-shadow:0 10px 24px #e6005c44;
+    display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden}
+  .balcard::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;
+    border-radius:50%;background:#ffffff22}
+  .balcard .lbl{font-size:12.5px;opacity:.9}
+  .balcard .amt{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+  .balcard .logo{height:34px;width:34px;border-radius:50%;background:#ffffff26;display:grid;place-items:center;font-size:18px;z-index:1}
+
+  /* Chat */
+  #chat{flex:1;overflow-y:auto;padding:8px 16px 4px;display:flex;flex-direction:column;gap:9px;scroll-behavior:smooth}
+  .b{padding:11px 14px;border-radius:16px;max-width:82%;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;animation:pop .18s ease-out}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}}
   .user{align-self:flex-end;background:var(--pd);color:#fff;border-bottom-right-radius:5px}
-  .wisi{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
-  .sys{align-self:center;background:transparent;color:var(--muted);font-size:12px}
-  .composer{display:flex;gap:8px;margin-top:10px}
-  .composer input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:22px;color:var(--ink);padding:11px 16px;font-size:14px;outline:none}
-  .pulse{animation:pulse 1.2s infinite}
-  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 #e6005c66}50%{box-shadow:0 0 0 12px #e6005c00}}
-  footer{color:var(--muted);font-size:11px;margin-top:16px;line-height:1.5;display:flex;align-items:center;gap:8px}
-  footer img{height:16px;opacity:.8}
-  code{color:var(--pd)}
+  .wisi{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .sys{align-self:center;background:transparent;color:var(--muted);font-size:12px;max-width:92%;text-align:center}
+  .typing{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:5px;
+    padding:12px 14px;border-radius:16px;display:none}
+  .typing.show{display:flex;gap:4px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bob 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bob{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+
+  /* Acciones rápidas */
+  .quick{display:flex;gap:8px;overflow-x:auto;padding:6px 16px 2px;scrollbar-width:none}
+  .quick::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    padding:8px 13px;border-radius:999px;font-size:13px;cursor:pointer;white-space:nowrap;transition:.15s}
+  .chip:hover{border-color:var(--pd);color:var(--pd)}
+
+  /* Composer */
+  .composer{display:flex;gap:9px;align-items:center;padding:10px 14px;
+    padding-bottom:max(12px,env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);background:var(--card)}
+  .composer input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:22px;
+    color:var(--ink);padding:12px 16px;font-size:14px;outline:none}
+  .composer input:focus{border-color:var(--pd)}
+  .iconbtn{width:44px;height:44px;flex:none;border:none;border-radius:50%;cursor:pointer;
+    display:grid;place-items:center;font-size:18px;color:#fff;
+    background:linear-gradient(135deg,var(--pd),var(--pd2));box-shadow:0 4px 12px #e6005c55;transition:.15s}
+  .iconbtn.ghost{background:var(--bg);color:var(--pd);box-shadow:none;border:1px solid var(--line)}
+  .iconbtn:active{transform:scale(.92)}
+  .iconbtn.live{animation:ring 1.3s infinite}
+  @keyframes ring{0%,100%{box-shadow:0 0 0 0 #e6005c66}50%{box-shadow:0 0 0 12px #e6005c00}}
+
+  /* Pantalla de inicio (overlay) */
+  .start{position:absolute;inset:0;z-index:5;background:var(--card);display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center}
+  .start .big{width:112px;height:112px;border-radius:50%;background:linear-gradient(135deg,#ffe3ee,#ffd1e3);
+    display:grid;place-items:center;overflow:hidden;box-shadow:0 12px 34px #e6005c44}
+  .start .big img,.start .big svg{width:100%;height:100%;object-fit:contain}
+  .start h2{margin:0;font-size:20px;font-weight:800}
+  .start p{margin:0;color:var(--ink-soft);font-size:14px;max-width:260px;line-height:1.5}
+  .btn{border:none;border-radius:14px;padding:14px 22px;font-size:15px;font-weight:700;cursor:pointer;
+    background:linear-gradient(135deg,var(--pd),var(--pd2));color:#fff;box-shadow:0 8px 20px #e6005c44}
+  .btn:active{transform:scale(.97)}
+  .hidden{display:none!important}
+
+  /* Hoja de confirmación (biometría) */
+  .sheet-bg{position:absolute;inset:0;background:#0009;z-index:8;display:none;align-items:flex-end;justify-content:center}
+  .sheet-bg.show{display:flex;animation:fade .2s}
+  @keyframes fade{from{opacity:0}}
+  .sheet{width:100%;background:var(--card);border-radius:24px 24px 0 0;padding:24px 22px;
+    padding-bottom:max(22px,env(safe-area-inset-bottom));animation:up .25s ease-out;text-align:center}
+  @keyframes up{from{transform:translateY(100%)}}
+  .sheet .fp{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;
+    background:#e6005c14;color:var(--pd);font-size:30px}
+  .sheet h3{margin:0 0 4px;font-size:16px}
+  .sheet .sub{color:var(--ink-soft);font-size:13px;margin-bottom:8px}
+  .sheet .detail{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+    font-size:14px;text-align:left;margin:12px 0 16px;line-height:1.5}
+  .sheet .btn{width:100%;margin-bottom:8px}
+  .sheet .link{background:none;border:none;color:var(--ink-soft);font-size:14px;cursor:pointer;padding:6px}
+
+  /* Toast */
+  .toast{position:absolute;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-size:13px;
+    opacity:0;transition:.25s;z-index:9;pointer-events:none;max-width:88%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer{font-size:10.5px;color:var(--muted);text-align:center;padding:8px 16px 4px;line-height:1.5}
+  footer img{height:13px;vertical-align:middle;opacity:.75;margin-right:4px}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
+  <!-- Overlay de inicio -->
+  <div class="start" id="startScreen">
+    <div class="big"><img id="startFace" src="/assets/wisi_avatar.gif" alt="Wisi" /></div>
+    <h2>Hola, soy Wisi 👋</h2>
+    <p>Tu asistente de PagoDirecto. Pídeme pagar servicios, el estacionamiento, donar o enviar fondos — por voz o texto.</p>
+    <button class="btn" id="btnStart">Empezar</button>
+    <div class="seg" id="voiceSelStart">
+      <button data-v="female" class="on">♀ Clari</button>
+      <button data-v="male">♂ Miguel</button>
+    </div>
+  </div>
+
+  <!-- App -->
   <header>
     <div class="face" id="face"><img id="faceImg" src="/assets/wisi_avatar.gif" alt="Wisi" /></div>
-    <div style="flex:1">
+    <div class="htxt">
       <h1>Wisi</h1>
-      <small id="status">sin conexión</small>
+      <div class="statusline"><span class="dot" id="dot"></span><span id="status">conectando…</span></div>
     </div>
-    <div class="seg" id="voiceSel" title="Voz del agente">
-      <button data-v="female" class="on">♀ Carito</button>
-      <button data-v="male">♂ Antonio</button>
+    <div class="seg" id="voiceSel">
+      <button data-v="female" class="on">♀ Clari</button>
+      <button data-v="male">♂ Miguel</button>
     </div>
   </header>
 
-  <div class="balcard"><span>Saldo disponible<br><b id="bal">—</b></span><span style="font-size:28px">💳</span></div>
-
-  <div class="row">
-    <button class="primary" id="btnStart">Iniciar</button>
-    <button id="btnMic" disabled>🎙️ Hablar</button>
+  <div class="balcard">
+    <div><div class="lbl">Saldo disponible</div><div class="amt" id="bal">—</div></div>
+    <div class="logo">💳</div>
   </div>
 
-  <div class="row" id="quick" style="display:none">
-    <button data-q="saldo">Saldo</button>
-    <button data-q="servicios">Servicios</button>
-    <button data-q="luz">Pagar luz</button>
-    <button data-q="parking">Estacionamiento</button>
-    <button data-q="donar">Donar</button>
-    <button data-q="enviar">Enviar fondos</button>
+  <div id="chat">
+    <div class="typing" id="typing"><i></i><i></i><i></i></div>
   </div>
 
-  <div id="chat"></div>
-
-  <div class="composer" id="composer" style="display:none">
-    <input id="text" placeholder="Escribe o pulsa 🎙️ Hablar…" />
-    <button class="primary" id="btnSend">Enviar</button>
+  <div class="quick" id="quick">
+    <button class="chip" data-q="saldo">Saldo</button>
+    <button class="chip" data-q="servicios">Servicios</button>
+    <button class="chip" data-q="luz">Pagar luz</button>
+    <button class="chip" data-q="parking">Estacionamiento</button>
+    <button class="chip" data-q="donar">Donar</button>
+    <button class="chip" data-q="enviar">Enviar fondos</button>
   </div>
 
-  <footer>
-    <img src="/assets/pagoDirecto.png" alt="PagoDirecto" />
-    · El agente nunca ejecuta dinero: cada pago se confirma con biometría/PIN. Demo (ledger simulado).
-  </footer>
+  <div class="composer">
+    <input id="text" placeholder="Escribe un mensaje…" autocomplete="off" />
+    <button class="iconbtn ghost" id="btnMic" title="Hablar" disabled>🎙️</button>
+    <button class="iconbtn" id="btnSend" title="Enviar">➤</button>
+  </div>
+
+  <footer><img src="/assets/pagoDirecto.png" alt="PagoDirecto" />El agente nunca ejecuta dinero: cada pago se confirma con biometría. Demo.</footer>
+
+  <!-- Hoja de confirmación -->
+  <div class="sheet-bg" id="sheetBg">
+    <div class="sheet">
+      <div class="fp">🔒</div>
+      <h3>Confirma tu operación</h3>
+      <div class="sub">PagoDirecto necesita tu biometría o PIN</div>
+      <div class="detail" id="sheetDetail"></div>
+      <button class="btn" id="sheetOk">Aprobar con biometría</button>
+      <button class="link" id="sheetCancel">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
@@ -86,82 +222,87 @@
 import { Conversation } from "https://esm.sh/@elevenlabs/client@0.7.1";
 
 const GW = location.origin;
-const chat = document.getElementById("chat");
-const statusEl = document.getElementById("status");
-const face = document.getElementById("face");
-const balEl = document.getElementById("bal");
+const $ = (id) => document.getElementById(id);
+const chat = $("chat"), typing = $("typing");
 
-// --- avatar Lottie (mismas animaciones que la app) -----------------------
-let anim = null, animName = null;
-function playFace(name) {
-  if (animName === name) return;
-  animName = name;
-  if (anim) { anim.destroy(); anim = null; }
-  const img = document.getElementById("faceImg");
-  if (img) img.remove();
-  anim = lottie.loadAnimation({
-    container: face, renderer: "svg", loop: true, autoplay: true,
-    path: `/assets/wisi_${name}.json`,
-  });
-}
-try { playFace("neutral"); } catch (e) {}
+const state = { token: null, voice: "female", conversation: null, signedUrl: null };
 
-let token = null, voice = "female", conversation = null;
-
-const add = (who, text) => {
+/* ---------- utilidades UI ---------- */
+const bs = (m) => "Bs " + (m / 100).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const setStatus = (t, kind) => { $("status").textContent = t; const d = $("dot"); d.className = "dot" + (kind ? " " + kind : ""); };
+const setBalance = (m) => { if (m != null) $("bal").textContent = bs(m); };
+function add(who, text) {
   const d = document.createElement("div");
   d.className = "b " + who; d.textContent = text;
-  chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-};
-const setStatus = (t) => (statusEl.textContent = t);
-const bs = (m) => "Bs " + (m / 100).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  chat.insertBefore(d, typing);
+  chat.scrollTop = chat.scrollHeight;
+}
+function showTyping(on) { typing.classList.toggle("show", on); if (on) chat.scrollTop = chat.scrollHeight; }
+let toastT;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200); }
 
-// --- gateway -------------------------------------------------------------
-async function session() {
-  const r = await fetch(`${GW}/api/session?principal=demo-user&voice=${voice}`, { method: "POST" });
+/* ---------- avatar Lottie (mismas animaciones de la app) ---------- */
+let anim = null, animName = null;
+function playFace(name) {
+  if (animName === name || !window.lottie) return;
+  animName = name;
+  if (anim) { anim.destroy(); anim = null; }
+  const img = $("faceImg"); if (img) img.remove();
+  face: { anim = lottie.loadAnimation({ container: $("face"), renderer: "svg", loop: true, autoplay: true, path: `/assets/wisi_${name}.json` }); }
+}
+
+/* ---------- gateway ---------- */
+async function api(path, opts = {}) {
+  const r = await fetch(GW + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...(state.token ? { Authorization: "Bearer " + state.token } : {}), ...(opts.headers || {}) },
+  });
+  if (!r.ok && r.status !== 400) throw new Error(path + " → " + r.status);
   return r.json();
 }
+const createSession = () => api(`/api/session?principal=demo-user&voice=${state.voice}`, { method: "POST" });
 async function callTool(name, params = {}) {
-  try { playFace("pensando"); } catch (e) {}
-  const r = await fetch(`${GW}/api/tool/${name}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(params),
-  });
-  const res = await r.json();
-  try { playFace("neutral"); } catch (e) {}
-  return res;
+  showTyping(true); playFace("pensando");
+  try { return await api(`/api/tool/${name}`, { method: "POST", body: JSON.stringify(params) }); }
+  finally { showTyping(false); playFace("neutral"); }
 }
-async function approvalProof(id) {
-  const r = await fetch(`${GW}/api/approval-proof?intent_id=${id}`, {
-    method: "POST", headers: { Authorization: `Bearer ${token}` },
+
+/* ---------- confirmación segura (hoja propia, no window.confirm) ---------- */
+function askBiometric(detailText) {
+  return new Promise((resolve) => {
+    $("sheetDetail").textContent = detailText || "¿Confirmas esta operación?";
+    const bg = $("sheetBg"); bg.classList.add("show");
+    const done = (ok) => { bg.classList.remove("show"); $("sheetOk").onclick = $("sheetCancel").onclick = null; resolve(ok); };
+    $("sheetOk").onclick = () => done(true);
+    $("sheetCancel").onclick = () => done(false);
   });
-  return (await r.json()).approval_proof;
 }
-async function confirmPayment(intentId) {
-  const ok = window.confirm("PagoDirecto 🔒\nConfirma esta operación con tu biometría/PIN.\n(Aceptar = aprobado)");
-  if (!ok) { add("sys", "Confirmación cancelada."); return "denied"; }
-  const proof = await approvalProof(intentId);
-  const r = await fetch(`${GW}/api/confirm`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ intent_id: intentId, approval_proof: proof }),
-  });
-  const res = await r.json();
-  add("wisi", res.speech || "Operación procesada.");
-  if (res.status === "ok" && res.data?.balance_minor != null) balEl.textContent = bs(res.data.balance_minor);
-  return JSON.stringify(res);
+async function confirmPayment(intentId, summaryText) {
+  const ok = await askBiometric(summaryText);
+  if (!ok) { add("sys", "Operación cancelada."); return "denied"; }
+  try {
+    const proof = (await api(`/api/approval-proof?intent_id=${intentId}`, { method: "POST" })).approval_proof;
+    const res = await api(`/api/confirm`, { method: "POST", body: JSON.stringify({ intent_id: intentId, approval_proof: proof }) });
+    add("wisi", res.speech || "Operación procesada.");
+    if (res.status === "ok") setBalance(res.data?.balance_minor);
+    return JSON.stringify(res);
+  } catch (e) { toast("No se pudo confirmar"); add("sys", "Error al confirmar."); return "error"; }
 }
 async function runPrepare(name, params) {
   const res = await callTool(name, params);
   add("wisi", res.speech || "");
-  if (res.status === "requires_confirmation" && res.data?.intent_id) await confirmPayment(res.data.intent_id);
+  if (res.status === "requires_confirmation" && res.data?.intent_id) {
+    const s = res.data.summary || {};
+    const txt = [s.service, s.foundation, s.recipient_ref, s.ticket_ref].filter(Boolean).join(" · ")
+      + (s.amount_minor ? " — " + bs(s.amount_minor) : "");
+    await confirmPayment(res.data.intent_id, txt || res.speech);
+  }
   return res;
 }
 
-// --- client tools que invoca el agente de voz ----------------------------
+/* ---------- client tools que invoca el agente de voz ---------- */
 const clientTools = {
-  get_balance: async () => { const r = await callTool("get_balance"); if (r.data?.balance_minor != null) balEl.textContent = bs(r.data.balance_minor); return JSON.stringify(r); },
+  get_balance: async () => { const r = await callTool("get_balance"); setBalance(r.data?.balance_minor); return JSON.stringify(r); },
   list_services: async (p) => JSON.stringify(await callTool("list_services", p)),
   explain_service: async (p) => JSON.stringify(await callTool("explain_service", p)),
   list_foundations: async () => JSON.stringify(await callTool("list_foundations")),
@@ -171,78 +312,79 @@ const clientTools = {
   prepare_transfer: async (p) => JSON.stringify(await callTool("prepare_transfer", p)),
   get_operation_status: async (p) => JSON.stringify(await callTool("get_operation_status", p)),
   create_support_case: async (p) => JSON.stringify(await callTool("create_support_case", p)),
-  open_app_screen: async (p) => { add("sys", `→ abrir pantalla: ${p.screen_key}`); return JSON.stringify(await callTool("open_app_screen", p)); },
+  open_app_screen: async (p) => { add("sys", "→ " + (p.screen_key || "")); return JSON.stringify(await callTool("open_app_screen", p)); },
   confirm_payment_in_app: async (p) => await confirmPayment(p.intent_id),
 };
 
-// --- arranque ------------------------------------------------------------
+/* ---------- arranque ---------- */
 async function start() {
-  document.getElementById("btnStart").disabled = true;
-  setStatus("conectando…");
-  const s = await session();
-  token = s.session_token;
-  document.getElementById("quick").style.display = "flex";
-  document.getElementById("composer").style.display = "flex";
-  const b = await callTool("get_balance");
-  if (b.data?.balance_minor != null) balEl.textContent = bs(b.data.balance_minor);
-  add("wisi", "¡Hola! Soy Wisi. Puedo pagarte servicios, tu ticket de estacionamiento, donar o enviar fondos. ¿Qué necesitas?");
-  setStatus(s.voice_enabled ? "listo · voz disponible" : "listo · solo chat");
-  document.getElementById("btnMic").disabled = !s.voice_enabled;
-  window._signedUrl = s.signed_url;
+  $("btnStart").disabled = true;
+  try {
+    const s = await createSession();
+    state.token = s.session_token; state.signedUrl = s.signed_url;
+    $("startScreen").classList.add("hidden");
+    setBalance((await callTool("get_balance")).data?.balance_minor);
+    add("wisi", "¡Hola! Soy Wisi. ¿Qué necesitas: pagar un servicio, el estacionamiento, donar o enviar fondos?");
+    setStatus(s.voice_enabled ? "listo · voz disponible" : "listo · solo chat", "on");
+    $("btnMic").disabled = !s.voice_enabled;
+    try { playFace("neutral"); } catch {}
+  } catch (e) { $("btnStart").disabled = false; toast("No pude conectar con el gateway"); }
 }
 
 async function toggleMic() {
-  if (conversation) {
-    await conversation.endSession(); conversation = null;
-    document.getElementById("btnMic").textContent = "🎙️ Hablar";
-    face.classList.remove("pulse"); playFace("neutral"); setStatus("voz detenida"); return;
+  if (state.conversation) {
+    await state.conversation.endSession(); state.conversation = null;
+    $("btnMic").classList.remove("live"); setStatus("voz detenida", "on"); playFace("neutral"); return;
   }
-  if (!window._signedUrl) { setStatus("voz no disponible"); return; }
+  if (!state.signedUrl) { toast("Voz no disponible"); return; }
   try {
-    conversation = await Conversation.startSession({
-      signedUrl: window._signedUrl, clientTools,
-      onConnect: () => { setStatus("escuchando…"); face.classList.add("pulse"); },
-      onDisconnect: () => { setStatus("voz finalizada"); face.classList.remove("pulse"); playFace("neutral"); conversation = null; document.getElementById("btnMic").textContent = "🎙️ Hablar"; },
-      onError: (e) => add("sys", "Error de voz: " + (e?.message || e)),
-      onModeChange: ({ mode }) => { setStatus(mode === "speaking" ? "Wisi hablando…" : "escuchando…"); playFace(mode === "speaking" ? "pensando" : "neutral"); },
+    state.conversation = await Conversation.startSession({
+      signedUrl: state.signedUrl, clientTools,
+      onConnect: () => { setStatus("escuchando…", "live"); $("btnMic").classList.add("live"); },
+      onDisconnect: () => { setStatus("voz finalizada", "on"); $("btnMic").classList.remove("live"); playFace("neutral"); state.conversation = null; },
+      onError: (e) => toast("Error de voz"),
+      onModeChange: ({ mode }) => { const sp = mode === "speaking"; setStatus(sp ? "Wisi hablando…" : "escuchando…", "live"); playFace(sp ? "pensando" : "neutral"); },
       onMessage: ({ message, source }) => add(source === "user" ? "user" : "wisi", message),
     });
-    document.getElementById("btnMic").textContent = "⏹ Detener";
-  } catch (e) { add("sys", "No se pudo iniciar la voz: " + (e?.message || e)); }
+  } catch (e) { toast("No se pudo iniciar la voz"); }
 }
 
+/* ---------- acciones rápidas / chat (sin voz) ---------- */
 async function quick(q) {
-  if (q === "saldo") { const r = await callTool("get_balance"); if (r.data?.balance_minor != null) balEl.textContent = bs(r.data.balance_minor); add("wisi", r.speech); }
+  if (q === "saldo") { const r = await callTool("get_balance"); setBalance(r.data?.balance_minor); add("wisi", r.speech); }
   else if (q === "servicios") add("wisi", (await callTool("list_services")).speech);
   else if (q === "luz") await runPrepare("prepare_payment", { service_ref: "corpoelec", account_number: "0001-2345", amount_minor: 18000 });
   else if (q === "parking") await runPrepare("prepare_parking", { ticket_ref: "TICKET-ABC-123" });
   else if (q === "donar") await runPrepare("prepare_donation", { foundation_ref: "fundana", amount_minor: 5000 });
   else if (q === "enviar") await runPrepare("prepare_transfer", { recipient_ref: "@maria", amount_minor: 25000 });
 }
-
 async function sendText() {
-  const el = document.getElementById("text"); const t = el.value.trim();
-  if (!t) return; el.value = ""; add("user", t);
+  const el = $("text"), t = el.value.trim(); if (!t) return;
+  el.value = ""; add("user", t);
+  if (state.conversation) return; // en voz, el agente maneja el texto
   const l = t.toLowerCase();
-  if (l.includes("saldo")) quick("saldo");
-  else if (l.includes("estacionamiento") || l.includes("parking")) quick("parking");
-  else if (l.includes("dona")) quick("donar");
-  else if (l.includes("envi") || l.includes("transfer")) quick("enviar");
-  else if (l.includes("luz") || l.includes("corpoelec")) quick("luz");
-  else if (l.includes("servicio") || l.includes("pagar")) quick("servicios");
-  else add("wisi", "Puedo: saldo, pagar servicios, estacionamiento, donar o enviar fondos. Pulsa 🎙️ para hablar con todo el poder del agente.");
+  if (l.includes("saldo")) return quick("saldo");
+  if (l.includes("estacionamiento") || l.includes("parking")) return quick("parking");
+  if (l.includes("dona")) return quick("donar");
+  if (l.includes("envi") || l.includes("transfer")) return quick("enviar");
+  if (l.includes("luz") || l.includes("corpoelec")) return quick("luz");
+  if (l.includes("servicio") || l.includes("pagar")) return quick("servicios");
+  add("wisi", "Puedo: saldo, pagar servicios, estacionamiento, donar o enviar fondos. Pulsa 🎙️ para hablar con todo el poder del agente.");
 }
 
-document.getElementById("btnStart").onclick = start;
-document.getElementById("btnMic").onclick = toggleMic;
-document.getElementById("btnSend").onclick = sendText;
-document.getElementById("text").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
-document.getElementById("quick").addEventListener("click", (e) => { const q = e.target.dataset.q; if (q) quick(q); });
-document.getElementById("voiceSel").addEventListener("click", (e) => {
-  const v = e.target.dataset.v; if (!v) return; voice = v;
-  [...document.querySelectorAll("#voiceSel button")].forEach((b) => b.classList.toggle("on", b.dataset.v === v));
-  if (token) add("sys", `voz: ${v === "female" ? "Carito" : "Antonio"} — pulsa Iniciar de nuevo para aplicarla`);
-});
+/* ---------- eventos ---------- */
+function pickVoice(v) {
+  state.voice = v;
+  document.querySelectorAll("#voiceSel button,#voiceSelStart button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  if (state.token) toast(`Voz: ${v === "female" ? "Clari" : "Miguel"} — pulsa de nuevo Empezar para aplicarla`);
+}
+$("btnStart").onclick = start;
+$("btnMic").onclick = toggleMic;
+$("btnSend").onclick = sendText;
+$("text").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
+$("quick").addEventListener("click", (e) => { const q = e.target.dataset.q; if (q) quick(q); });
+document.querySelectorAll("#voiceSel,#voiceSelStart").forEach((el) =>
+  el.addEventListener("click", (e) => { const v = e.target.dataset.v; if (v) pickVoice(v); }));
 </script>
 </body>
 </html>

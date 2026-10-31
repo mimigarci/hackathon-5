@@ -25,10 +25,13 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENT_DIR = ROOT / "agent"
 ENV_PATH = ROOT / "backend" / ".env"
 
+# Voces venezolanas de alta calidad (modelo eleven_v4). Deben estar libres de
+# "live moderation" para poder usarse en agentes (ElevenLabs lo exige).
 VOICES = {
-    "FEMALE": "gBXbHGNePmWl9WrdHoCH",  # Carito - Happy & Expressive (venezolana)
-    "MALE": "YYSDvkDDnQXWMDjhmB8P",     # Fabriccio Gutierrez - Serious & calm (venezolano)
+    "FEMALE": "9Ux14cxOYULytGFBVsW4",  # Clari - Natural, Clear (venezolana)
+    "MALE": "STFMZniNPVEtF1Ug6b81",     # Miguel - Warm, Confident, Inspiring (venezolano)
 }
+TTS_MODEL = "eleven_v4"
 
 
 def _p(obj: dict) -> dict:
@@ -148,7 +151,7 @@ def create_agent(h: dict, name: str, voice_id: str, prompt: str, tools: list[dic
                     "tools": tools,
                 },
             },
-            "tts": {"voice_id": voice_id, "model_id": "eleven_turbo_v2_5"},
+            "tts": {"voice_id": voice_id, "model_id": TTS_MODEL},
             "asr": {"quality": "high"},
         },
     }
